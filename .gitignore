@@ -1,0 +1,21 @@
+# Ignorowanie binariów
+*.exe
+*.out
+*.o
+
+# Ignorowanie logów
+*.log
+
+# Ignorowanie folderów tymczasowych
+/vendor/
+
+# Pliki systemowe
+.DS_Store
+Thumbs.db
+
+# Konfiguracja IDE
+.idea/
+.vscode/
+
+# Pliki Go mod
+/go.sum
