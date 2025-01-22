@@ -2,70 +2,93 @@ package services
 
 import (
 	"encoding/csv"
-	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
-// ParseSwiftCodes wczytuje i przetwarza dane z pliku CSV
+// ParseSwiftCodes parsuje dane SWIFT z pliku CSV i zwraca listę struktur SwiftCode
 func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
-	// 1. Otwieramy plik CSV
+	// Otwórz plik CSV
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %v", err)
+		return nil, err
 	}
 	defer file.Close()
 
-	// 2. Tworzymy czytnik CSV
+	// Wczytaj dane z pliku CSV
 	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
+	reader.Comma = ',' // Zmień separator, jeśli plik używa czegoś innego
+	data, err := reader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CSV file: %v", err)
+		return nil, err
 	}
 
-	// 3. Przygotowujemy listę wynikową i mapę siedzib głównych
-	var swiftCodes []models.SwiftCode
-	headquarterMap := make(map[string]string)
+	// Sprawdź, czy są dane w pliku
+	if len(data) <= 1 {
+		return nil, nil // Plik jest pusty lub zawiera tylko nagłówki
+	}
 
-	// 4. Przetwarzamy każdy rekord z CSV
-	for i, record := range records {
-		if i == 0 {
-			// Pomijamy nagłówki
+	// Pomijamy nagłówki (pierwszy wiersz)
+	data = data[1:]
+
+	// Mapa headquarters
+	headquartersMap := make(map[string]string) // Klucz: pierwsze 8 znaków SWIFT, Wartość: pełny SWIFT code headquarter
+
+	// Lista wszystkich SWIFT codes
+	var swiftCodes []models.SwiftCode
+
+	// Pierwszy przebieg: znajdź wszystkie headquarters
+	for _, record := range data {
+		swiftCode := strings.TrimSpace(record[1]) // Kolumna B: SWIFT CODE
+
+		// Sprawdź, czy to headquarter
+		if !strings.HasSuffix(swiftCode, "XXX") {
+			continue // Jeśli nie headquarter, pomiń
+		}
+
+		// Dodaj headquarter do mapy
+		headquartersMap[swiftCode[:8]] = swiftCode
+	}
+
+	// Drugi przebieg: przetwarzanie wszystkich rekordów i przypisanie headquarter_id
+	for _, record := range data {
+		swiftCode := strings.TrimSpace(record[1]) // Kolumna B: SWIFT CODE
+		isHeadquarter := strings.HasSuffix(swiftCode, "XXX")
+
+		// Walidacja kodu ISO-2
+		countryISO2 := strings.ToUpper(strings.TrimSpace(record[0]))
+		if len(countryISO2) != 2 {
+			log.Printf("Invalid country ISO2 code: %s, skipping record", countryISO2)
 			continue
 		}
 
-		// 5. Parsujemy dane z rekordu
-		swiftCode := strings.ToUpper(record[1]) // Kolumna B: SWIFT CODE
-		isHeadquarter := strings.HasSuffix(swiftCode, "XXX")
-
-		// 6. Dodajemy do mapy, jeśli to siedziba główna
-		if isHeadquarter {
-			headquarterMap[swiftCode[:8]] = swiftCode
+		// Znajdź headquarter_id dla branchy
+		var headquarterID *string
+		if !isHeadquarter {
+			if hqSwift, exists := headquartersMap[swiftCode[:8]]; exists {
+				headquarterID = &hqSwift
+			}
 		}
 
-		// 7. Tworzymy instancję SwiftCode z przetworzonymi danymi
+		// Tworzenie struktury SwiftCode
 		swift := models.SwiftCode{
 			SwiftCode:     swiftCode,
 			BankName:      strings.TrimSpace(record[3]), // Kolumna D: NAME
 			Address:       strings.TrimSpace(record[4]), // Kolumna E: ADDRESS
 			TownName:      strings.TrimSpace(record[5]), // Kolumna F: TOWN NAME
-			CountryISO2:   strings.ToUpper(record[0]),   // Kolumna A: COUNTRY ISO2 CODE
+			CountryISO2:   countryISO2,
 			CountryName:   strings.TrimSpace(record[6]), // Kolumna G: COUNTRY NAME
 			TimeZone:      strings.TrimSpace(record[7]), // Kolumna H: TIME ZONE
 			IsHeadquarter: isHeadquarter,
+			HeadquarterID: headquarterID,
 		}
 
-		// 8. Powiązanie oddziału z siedzibą główną
-		if !isHeadquarter {
-			if hq, ok := headquarterMap[swiftCode[:8]]; ok {
-				swift.HeadquarterID = &hq
-			}
-		}
-
-		// 9. Dodajemy rekord do listy wynikowej
+		// Dodaj rekord do listy
 		swiftCodes = append(swiftCodes, swift)
 	}
+
 	return swiftCodes, nil
 }
