@@ -13,5 +13,5 @@ type SwiftCode struct {
 	TownName      string  // Nazwa miasta
 	TimeZone      string  // Strefa czasowa
 	IsHeadquarter bool    `gorm:"not null"` // Czy to siedziba główna
-	HeadquarterID *string // Powiązanie z siedzibą główną
+	HeadquarterID *string `gorm:"index"`
 }

@@ -85,7 +85,6 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 			IsHeadquarter: isHeadquarter,
 			HeadquarterID: headquarterID,
 		}
-
 		// Dodaj rekord do listy
 		swiftCodes = append(swiftCodes, swift)
 	}

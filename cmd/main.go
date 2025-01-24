@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/mroczekDNF/swift-api/internal/db"
+	"github.com/mroczekDNF/swift-api/internal/routes"
 	"github.com/mroczekDNF/swift-api/internal/services"
 )
 
@@ -31,4 +32,7 @@ func main() {
 	}
 
 	log.Println("Dane zostały pomyślnie zapisane w bazie!")
+
+	r := routes.SetupRouter()
+	r.Run(":8080")
 }
