@@ -12,7 +12,7 @@ import (
 // GetSwiftCodesByCountry zwraca wszystkie SWIFT codes dla danego kraju
 func GetSwiftCodesByCountry(c *gin.Context) {
 	// Pobierz kod ISO-2 kraju z parametrów URL
-	countryISO2 := strings.TrimSpace(c.Param("countryISO2code"))
+	countryISO2 := strings.ToUpper(strings.TrimSpace(c.Param("countryISO2")))
 
 	// Znajdź wszystkie rekordy dla danego kraju
 	var swiftCodes []models.SwiftCode

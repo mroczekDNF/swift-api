@@ -9,8 +9,9 @@ import (
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
-	router.GET("/v1/swift-codes/:swift-code", handlers.GetSwiftCodeDetails)
-	router.GET("/v1/swift-codes/country/:country", handlers.GetSwiftCodesByCountry)
+	router.GET("/v1/swift-codes/:swiftCode", handlers.GetSwiftCodeDetails)
+	router.GET("/v1/swift-codes/country/:countryISO2", handlers.GetSwiftCodesByCountry)
+	router.POST("/v1/swift-codes", handlers.AddSwiftCode)
 
 	return router
 }
