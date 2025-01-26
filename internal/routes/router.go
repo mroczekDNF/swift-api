@@ -9,11 +9,8 @@ import (
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
-	// Endpoint testowy
-	// router.GET("/ping", func(c *gin.Context) {
-	// 	c.JSON(200, gin.H{"message": "pong"})
-	// })
 	router.GET("/v1/swift-codes/:swift-code", handlers.GetSwiftCodeDetails)
+	router.GET("/v1/swift-codes/country/:country", handlers.GetSwiftCodesByCountry)
 
 	return router
 }

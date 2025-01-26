@@ -42,7 +42,7 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 
 	// Pierwszy przebieg: znajdź wszystkie headquarters
 	for _, record := range data {
-		swiftCode := strings.TrimSpace(record[1]) // Kolumna B: SWIFT CODE
+		swiftCode := strings.ToUpper(strings.TrimSpace(record[1])) // Kolumna B: SWIFT CODE
 
 		// Sprawdź, czy to headquarter
 		if !strings.HasSuffix(swiftCode, "XXX") {
@@ -55,7 +55,7 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 
 	// Drugi przebieg: przetwarzanie wszystkich rekordów i przypisanie headquarter_id
 	for _, record := range data {
-		swiftCode := strings.TrimSpace(record[1]) // Kolumna B: SWIFT CODE
+		swiftCode := strings.ToUpper(strings.TrimSpace(record[1])) // Kolumna B: SWIFT CODE
 		isHeadquarter := strings.HasSuffix(swiftCode, "XXX")
 
 		// Walidacja kodu ISO-2
@@ -76,18 +76,18 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 		// Tworzenie struktury SwiftCode
 		swift := models.SwiftCode{
 			SwiftCode:     swiftCode,
-			BankName:      strings.TrimSpace(record[3]), // Kolumna D: NAME
-			Address:       strings.TrimSpace(record[4]), // Kolumna E: ADDRESS
-			TownName:      strings.TrimSpace(record[5]), // Kolumna F: TOWN NAME
+			BankName:      strings.ToUpper(strings.TrimSpace(record[3])), // Kolumna D: NAME
+			Address:       strings.ToUpper(strings.TrimSpace(record[4])), // Kolumna E: ADDRESS
+			TownName:      strings.ToUpper(strings.TrimSpace(record[5])), // Kolumna F: TOWN NAME
 			CountryISO2:   countryISO2,
-			CountryName:   strings.TrimSpace(record[6]), // Kolumna G: COUNTRY NAME
-			TimeZone:      strings.TrimSpace(record[7]), // Kolumna H: TIME ZONE
+			CountryName:   strings.ToUpper(strings.TrimSpace(record[6])), // Kolumna G: COUNTRY NAME
+			TimeZone:      strings.ToUpper(strings.TrimSpace(record[7])), // Kolumna H: TIME ZONE
 			IsHeadquarter: isHeadquarter,
 			HeadquarterID: headquarterID,
 		}
+
 		// Dodaj rekord do listy
 		swiftCodes = append(swiftCodes, swift)
 	}
-
 	return swiftCodes, nil
 }

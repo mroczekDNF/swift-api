@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mroczekDNF/swift-api/internal/db"
@@ -10,7 +12,9 @@ import (
 
 // GetSwiftCodeDetails zwraca szczegóły dla danego SWIFT code
 func GetSwiftCodeDetails(c *gin.Context) {
-	swiftCode := c.Param("swift-code") // Pobierz {swift-code} z URL
+	swiftCode := strings.TrimSpace(c.Param("swift-code")) // Pobierz {swift-code} z URL
+
+	log.Printf("Param swift-code: %s", c.Param("swift-code"))
 
 	// Pobierz szczegóły dla podanego SWIFT code
 	var swift models.SwiftCode
