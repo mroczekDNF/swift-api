@@ -10,8 +10,6 @@ type SwiftCode struct {
 	Address       string  // Adres banku
 	CountryISO2   string  `gorm:"size:2;not null"` // Kod kraju (ISO2)
 	CountryName   string  `gorm:"not null"`        // Nazwa kraju
-	TownName      string  // Nazwa miasta
-	TimeZone      string  // Strefa czasowa
-	IsHeadquarter bool    `gorm:"not null"` // Czy to siedziba główna
+	IsHeadquarter bool    `gorm:"not null"`        // Czy to siedziba główna
 	HeadquarterID *string `gorm:"index"`
 }

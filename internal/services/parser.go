@@ -78,10 +78,8 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 			SwiftCode:     swiftCode,
 			BankName:      strings.ToUpper(strings.TrimSpace(record[3])), // Kolumna D: NAME
 			Address:       strings.ToUpper(strings.TrimSpace(record[4])), // Kolumna E: ADDRESS
-			TownName:      strings.ToUpper(strings.TrimSpace(record[5])), // Kolumna F: TOWN NAME
 			CountryISO2:   countryISO2,
 			CountryName:   strings.ToUpper(strings.TrimSpace(record[6])), // Kolumna G: COUNTRY NAME
-			TimeZone:      strings.ToUpper(strings.TrimSpace(record[7])), // Kolumna H: TIME ZONE
 			IsHeadquarter: isHeadquarter,
 			HeadquarterID: headquarterID,
 		}

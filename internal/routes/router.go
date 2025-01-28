@@ -12,6 +12,7 @@ func SetupRouter() *gin.Engine {
 	router.GET("/v1/swift-codes/:swiftCode", handlers.GetSwiftCodeDetails)
 	router.GET("/v1/swift-codes/country/:countryISO2", handlers.GetSwiftCodesByCountry)
 	router.POST("/v1/swift-codes", handlers.AddSwiftCode)
+	router.DELETE("/v1/swift-codes/:swift-code", handlers.DeleteSwiftCode)
 
 	return router
 }
