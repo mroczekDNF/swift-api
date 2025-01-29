@@ -1,49 +1,42 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mroczekDNF/swift-api/internal/db"
 	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
 // GetSwiftCodeDetails zwraca szczegóły dla danego SWIFT code
-func GetSwiftCodeDetails(c *gin.Context) {
-	swiftCode := strings.TrimSpace(c.Param("swiftCode")) // Pobierz {swift-code} z URL
+func (h *SwiftCodeHandler) GetSwiftCodeDetails(c *gin.Context) {
+	swiftCode := strings.TrimSpace(c.Param("swiftCode"))
 
 	// Pobierz szczegóły dla podanego SWIFT code
-	var swift models.SwiftCode
-	if err := db.DB.Where("swift_code = ?", swiftCode).First(&swift).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "SWIFT code not found"})
+	swift, err := h.repo.GetBySwiftCode(swiftCode)
+	if err != nil {
+		log.Println("Błąd pobierania SWIFT code:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania danych"})
+		return
+	}
+	if swift == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "SWIFT code nie znaleziony"})
 		return
 	}
 
 	// Jeśli to headquarter, znajdź wszystkie branche
+	var branches []models.SwiftCode
 	if swift.IsHeadquarter {
-		var branches []models.SwiftCode
-		if err := db.DB.Where("headquarter_id = ?", swift.SwiftCode).Find(&branches).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch branches"})
+		branches, err = h.repo.GetBranchesByHeadquarter(swift.SwiftCode)
+		if err != nil {
+			log.Println("Błąd pobierania branchy:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania branchy"})
 			return
 		}
-
-		// Struktura odpowiedzi dla headquarter
-		response := gin.H{
-			"address":       swift.Address,
-			"bankName":      swift.BankName,
-			"countryISO2":   swift.CountryISO2,
-			"countryName":   swift.CountryName,
-			"isHeadquarter": swift.IsHeadquarter,
-			"swiftCode":     swift.SwiftCode,
-			"branches":      branches, // Lista branchy
-		}
-
-		c.JSON(http.StatusOK, response)
-		return
 	}
 
-	// Jeśli to branch, zwróć tylko jego szczegóły
+	// Struktura odpowiedzi
 	response := gin.H{
 		"address":       swift.Address,
 		"bankName":      swift.BankName,
@@ -51,6 +44,7 @@ func GetSwiftCodeDetails(c *gin.Context) {
 		"countryName":   swift.CountryName,
 		"isHeadquarter": swift.IsHeadquarter,
 		"swiftCode":     swift.SwiftCode,
+		"branches":      branches,
 	}
 
 	c.JSON(http.StatusOK, response)

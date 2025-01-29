@@ -1,54 +1,55 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mroczekDNF/swift-api/internal/db"
-	"github.com/mroczekDNF/swift-api/internal/models"
+	"github.com/mroczekDNF/swift-api/internal/repositories"
 )
 
+// SwiftCodeHandler obsługuje operacje na kodach SWIFT
+type SwiftCodeHandler struct {
+	repo *repositories.SwiftCodeRepository
+}
+
+// NewSwiftCodeHandler tworzy nowy handler
+func NewSwiftCodeHandler(repo *repositories.SwiftCodeRepository) *SwiftCodeHandler {
+	return &SwiftCodeHandler{repo: repo}
+}
+
 // DeleteSwiftCode obsługuje żądanie DELETE /v1/swift-codes/{swift-code}
-func DeleteSwiftCode(c *gin.Context) {
-	// Pobierz swift-code z parametrów URL
+func (h *SwiftCodeHandler) DeleteSwiftCode(c *gin.Context) {
 	swiftCode := strings.ToUpper(strings.TrimSpace(c.Param("swift-code")))
 
-	// Rozpocznij transakcję
-	tx := db.DB.Begin()
-
-	// Wyszukaj rekord w bazie danych
-	var swift models.SwiftCode
-	if err := tx.Where("swift_code = ?", swiftCode).First(&swift).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusNotFound, gin.H{"message": "SWIFT code not found"})
+	// Sprawdź, czy kod SWIFT istnieje
+	swift, err := h.repo.GetBySwiftCode(swiftCode)
+	if err != nil {
+		log.Println("Błąd pobierania SWIFT code:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd pobierania danych"})
+		return
+	}
+	if swift == nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "SWIFT code nie znaleziony"})
 		return
 	}
 
-	// Jeśli rekord jest headquarterem, usuń powiązania branchy
+	// Jeśli kod to headquarter, usuń powiązania branchy
 	if swift.IsHeadquarter {
-		if err := tx.Model(&models.SwiftCode{}).
-			Where("headquarter_id = ?", swift.SwiftCode).
-			Update("headquarter_id", nil).Error; err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update branches", "details": err.Error()})
+		if err := h.repo.DetachBranchesFromHeadquarter(swift.ID); err != nil {
+			log.Println("Błąd odłączania branchy:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd aktualizacji branchy"})
 			return
 		}
 	}
 
-	// Usuń rekord
-	if err := tx.Delete(&swift).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete SWIFT code", "details": err.Error()})
+	// Usuń kod SWIFT
+	if err := h.repo.DeleteSwiftCode(swiftCode); err != nil {
+		log.Println("Błąd usuwania SWIFT code:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd usuwania SWIFT code"})
 		return
 	}
 
-	// Zatwierdź transakcję
-	if err := tx.Commit().Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Transaction failed", "details": err.Error()})
-		return
-	}
-
-	// Zwróć odpowiedź
-	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code usunięty"})
 }

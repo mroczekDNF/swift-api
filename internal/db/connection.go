@@ -1,43 +1,57 @@
 package db
 
 import (
+	"database/sql"
 	"log"
 
-	"github.com/mroczekDNF/swift-api/internal/models"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	_ "github.com/jackc/pgx/v5/stdlib" // Sterownik PostgreSQL dla database/sql
 )
 
-var DB *gorm.DB // Globalne połączenie z bazą danych
+var DB *sql.DB // Globalne połączenie z bazą danych
 
-// InitDatabase inicjalizuje połączenie z bazą danych PostgreSQL
+// InitDatabase inicjalizuje połączenie z bazą PostgreSQL
 func InitDatabase(dsn string) {
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	DB, err = sql.Open("pgx", dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Błąd połączenia z bazą danych: %v", err)
 	}
-	log.Println("Database connection established")
+
+	// Sprawdzenie połączenia
+	if err := DB.Ping(); err != nil {
+		log.Fatalf("Baza danych nie odpowiada: %v", err)
+	}
+
+	log.Println("Połączenie z bazą danych nawiązane")
 }
 
-// MigrateDatabase automatycznie tworzy tabele w bazie danych
+// MigrateDatabase tworzy tabelę swift_codes, jeśli nie istnieje
 func MigrateDatabase() {
-	if err := DB.AutoMigrate(&models.SwiftCode{}); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+	query := `
+	CREATE TABLE IF NOT EXISTS swift_codes (
+		id SERIAL PRIMARY KEY,
+		swift_code VARCHAR(11) UNIQUE NOT NULL,
+		bank_name TEXT NOT NULL,
+		address TEXT,
+		country_iso2 CHAR(2) NOT NULL,
+		country_name TEXT NOT NULL,
+		is_headquarter BOOLEAN NOT NULL,
+		headquarter_id INT REFERENCES swift_codes(id) ON DELETE SET NULL
+	);`
+
+	_, err := DB.Exec(query)
+	if err != nil {
+		log.Fatalf("Błąd migracji bazy danych: %v", err)
 	}
-	log.Println("Database migrated successfully")
+
+	log.Println("Migracja bazy danych zakończona sukcesem")
 }
 
 // CloseDatabase zamyka połączenie z bazą danych
 func CloseDatabase() {
-	sqlDB, err := DB.DB()
-	if err != nil {
-		log.Fatalf("Failed to retrieve database connection: %v", err)
+	if err := DB.Close(); err != nil {
+		log.Fatalf("Błąd zamykania połączenia z bazą danych: %v", err)
 	}
 
-	if err := sqlDB.Close(); err != nil {
-		log.Fatalf("Failed to close database connection: %v", err)
-	}
-
-	log.Println("Database connection closed")
+	log.Println("Połączenie z bazą danych zamknięte")
 }

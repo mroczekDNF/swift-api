@@ -23,16 +23,16 @@ func main() {
 	filePath := "data/swift_codes.csv"
 	swiftCodes, err := services.ParseSwiftCodes(filePath)
 	if err != nil {
-		log.Fatalf("Error parsing SWIFT codes: %v", err)
+		log.Fatalf("Błąd parsowania SWIFT codes: %v", err)
 	}
 
 	// Zapisanie danych do bazy
-	if err := services.SaveSwiftCodesToDatabase(swiftCodes); err != nil {
-		log.Fatalf("Error saving SWIFT codes to database: %v", err)
+	if err := services.SaveSwiftCodesToDatabase(db.DB, swiftCodes); err != nil {
+		log.Fatalf("Błąd zapisu SWIFT codes do bazy: %v", err)
 	}
 
 	log.Println("Dane zostały pomyślnie zapisane w bazie!")
 
-	r := routes.SetupRouter()
+	r := routes.SetupRouter(db.DB)
 	r.Run(":8080")
 }

@@ -6,12 +6,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mroczekDNF/swift-api/internal/db"
 	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
 // AddSwiftCode obsługuje żądanie POST /v1/swift-codes/
-func AddSwiftCode(c *gin.Context) {
+func (h *SwiftCodeHandler) AddSwiftCode(c *gin.Context) {
 	// Struktura dla żądania
 	var request struct {
 		Address       string `json:"address" binding:"required"`
@@ -22,20 +21,15 @@ func AddSwiftCode(c *gin.Context) {
 		SwiftCode     string `json:"swiftCode" binding:"required"`
 	}
 
-	// Walidacja JSON-a
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request structure", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Niepoprawna struktura żądania", "details": err.Error()})
 		return
 	}
 
-	// Upewnij się, że `isHeadquarter` nie jest `nil`
 	if request.IsHeadquarter == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Field 'isHeadquarter' is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Pole 'isHeadquarter' jest wymagane"})
 		return
 	}
-
-	// Logowanie wartości IsHeadquarter
-	log.Printf("IsHeadquarter value: %v", *request.IsHeadquarter)
 
 	// Normalizacja danych
 	swiftCode := strings.ToUpper(strings.TrimSpace(request.SwiftCode))
@@ -43,13 +37,18 @@ func AddSwiftCode(c *gin.Context) {
 	countryName := strings.ToUpper(strings.TrimSpace(request.CountryName))
 
 	// Sprawdź, czy rekord z tym SWIFT code już istnieje
-	var existing models.SwiftCode
-	if err := db.DB.Where("swift_code = ?", swiftCode).First(&existing).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"message": "SWIFT code already exists"})
+	exists, err := h.repo.GetBySwiftCode(swiftCode)
+	if err != nil {
+		log.Println("Błąd sprawdzania istnienia SWIFT code:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd sprawdzania danych"})
+		return
+	}
+	if exists != nil {
+		c.JSON(http.StatusConflict, gin.H{"message": "SWIFT code już istnieje"})
 		return
 	}
 
-	// Utwórz nowy rekord
+	// Tworzenie nowego rekordu
 	newSwiftCode := models.SwiftCode{
 		SwiftCode:     swiftCode,
 		BankName:      strings.TrimSpace(request.BankName),
@@ -60,32 +59,24 @@ func AddSwiftCode(c *gin.Context) {
 	}
 
 	// Jeśli to branch, znajdź odpowiedni headquarter
-	// if !*request.IsHeadquarter {
-	// 	var headquarter models.SwiftCode
-	// 	if err := db.DB.Where("swift_code = ?", swiftCode[:8]+"XXX").First(&headquarter).Error; err == nil {
-	// 		newSwiftCode.HeadquarterID = &headquarter.SwiftCode
-	// 	} else {
-	// 		c.JSON(http.StatusBadRequest, gin.H{"message": "Headquarter not found for branch"})
-	// 		return
-	// 	}
-	// }
-	// tu sie trzeba zastanowic jeszcze
 	if !*request.IsHeadquarter {
-		var headquarter models.SwiftCode
-		if err := db.DB.Where("swift_code = ?", swiftCode[:8]+"XXX").First(&headquarter).Error; err == nil {
-			newSwiftCode.HeadquarterID = &headquarter.SwiftCode
-		} else {
-			// Logowanie informacyjne, jeśli nie znaleziono headquarter
-			log.Printf("Headquarter not found for branch with SWIFT code: %s", swiftCode)
-			// Pole HeadquarterID pozostanie puste (nil)
+		headquarter, err := h.repo.GetBySwiftCode(swiftCode[:8] + "XXX")
+		if err != nil {
+			log.Println("Błąd wyszukiwania headquarter:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd wyszukiwania headquarter"})
+			return
+		}
+		if headquarter != nil {
+			newSwiftCode.HeadquarterID = &headquarter.ID
 		}
 	}
+
 	// Zapisz rekord do bazy danych
-	if err := db.DB.Create(&newSwiftCode).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to save SWIFT code", "details": err.Error()})
+	if err := h.repo.InsertSwiftCode(&newSwiftCode); err != nil {
+		log.Println("Błąd zapisu SWIFT code:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd zapisu SWIFT code"})
 		return
 	}
 
-	// Zwróć odpowiedź
-	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code added successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code dodany poprawnie"})
 }
