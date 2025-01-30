@@ -31,17 +31,31 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 
 	data = data[1:]
 
-	headquartersMap := make(map[string]models.SwiftCode) // Mapowanie kodu SWIFT na headquarter
-	var branches []models.SwiftCode                      // Oddziały (branches)
-	var swiftCodes []models.SwiftCode
+	// Mapa do przechowywania ID dla headquarters
+	headquartersMap := make(map[string]int64)
 
+	// Prealokacja pamięci dla listy wynikowej (eliminacja `append()`)
+	swiftCodes := make([]models.SwiftCode, len(data))
+
+	// 🔹 **Pierwsza pętla** – przypisujemy ID tylko dla headquarters
 	for _, record := range data {
+		swiftCode := strings.ToUpper(strings.TrimSpace(record[1]))
+
+		if strings.HasSuffix(swiftCode, "XXX") {
+			headquartersMap[swiftCode[:8]] = idCounter // Zapisujemy ID dla headquarters
+			idCounter++                                // Inkrementujemy ID tylko dla headquarters
+		}
+	}
+
+	// 🔹 **Druga pętla** – teraz tworzymy pełne instancje `SwiftCode`
+	for i, record := range data {
 		swiftCode := strings.ToUpper(strings.TrimSpace(record[1]))
 		isHeadquarter := strings.HasSuffix(swiftCode, "XXX")
 		countryISO2 := strings.ToUpper(strings.TrimSpace(record[0]))
 
+		// Tworzymy instancję `SwiftCode`
 		swift := models.SwiftCode{
-			ID:            idCounter, // Ręcznie przypisujemy unikalne ID
+			ID:            idCounter,
 			SwiftCode:     swiftCode,
 			BankName:      strings.TrimSpace(record[3]),
 			Address:       strings.TrimSpace(record[4]),
@@ -50,27 +64,21 @@ func ParseSwiftCodes(filePath string) ([]models.SwiftCode, error) {
 			IsHeadquarter: isHeadquarter,
 			HeadquarterID: nil, // Jawnie przypisujemy `nil`
 		}
-		idCounter++ // Zwiększamy licznik ID
 
 		if isHeadquarter {
-			// Zapisujemy headquarters w mapie
-			swiftCodes = append(swiftCodes, swift)
-			headquartersMap[swiftCode[:8]] = swift
+			// Headquarters używają ID z mapy
+			swift.ID = headquartersMap[swiftCode[:8]]
 		} else {
-			// Dodajemy branche do oddzielnej listy
-			branches = append(branches, swift)
+			// Branch używa nowego ID i przypisuje ID headquarters
+			if hqID, exists := headquartersMap[swiftCode[:8]]; exists {
+				swift.HeadquarterID = &hqID
+			}
+			idCounter++ // Inkrementujemy ID tylko dla branchy
 		}
-	}
 
-	// Aktualizujemy branche o poprawne headquarter_id
-	for i, branch := range branches {
-		if hq, exists := headquartersMap[branch.SwiftCode[:8]]; exists {
-			branches[i].HeadquarterID = &hq.ID
-		}
+		// Zapisujemy rekord w prealokowanej tablicy
+		swiftCodes[i] = swift
 	}
-
-	// Dodajemy branche na końcu
-	swiftCodes = append(swiftCodes, branches...)
 
 	return swiftCodes, nil
 }
