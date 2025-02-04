@@ -24,7 +24,9 @@ func (r *SwiftCodeRepository) GetBySwiftCode(code string) (*models.SwiftCode, er
 		FROM swift_codes WHERE swift_code = $1;`
 
 	swift := &models.SwiftCode{}
-	err := r.db.QueryRow(query, code).Scan(&swift.ID, &swift.SwiftCode, &swift.BankName, &swift.Address,
+	var address sql.NullString // Obsługa potencjalnego NULL w bazie
+
+	err := r.db.QueryRow(query, code).Scan(&swift.ID, &swift.SwiftCode, &swift.BankName, &address,
 		&swift.CountryISO2, &swift.CountryName, &swift.IsHeadquarter, &swift.HeadquarterID)
 
 	if err != nil {
@@ -34,6 +36,14 @@ func (r *SwiftCodeRepository) GetBySwiftCode(code string) (*models.SwiftCode, er
 		log.Println("Błąd pobierania SwiftCode:", err)
 		return nil, err
 	}
+
+	// Jeśli adres jest NULL, ustawiamy wartość "UNKNOWN"
+	if address.Valid {
+		swift.Address = address.String
+	} else {
+		swift.Address = "UNKNOWN"
+	}
+
 	return swift, nil
 }
 
@@ -53,11 +63,22 @@ func (r *SwiftCodeRepository) GetByCountryISO2(countryISO2 string) ([]models.Swi
 	var swiftCodes []models.SwiftCode
 	for rows.Next() {
 		var swift models.SwiftCode
-		if err := rows.Scan(&swift.ID, &swift.SwiftCode, &swift.BankName, &swift.Address,
-			&swift.CountryISO2, &swift.CountryName, &swift.IsHeadquarter, &swift.HeadquarterID); err != nil {
+		var address sql.NullString // Obsługa potencjalnego NULL w bazie
+
+		err := rows.Scan(&swift.ID, &swift.SwiftCode, &swift.BankName, &address,
+			&swift.CountryISO2, &swift.CountryName, &swift.IsHeadquarter, &swift.HeadquarterID)
+		if err != nil {
 			log.Println("Błąd skanowania rekordu SWIFT:", err)
 			return nil, err
 		}
+
+		// Jeśli adres jest NULL, ustawiamy wartość "UNKNOWN"
+		if address.Valid {
+			swift.Address = address.String
+		} else {
+			swift.Address = "UNKNOWN"
+		}
+
 		swiftCodes = append(swiftCodes, swift)
 	}
 	return swiftCodes, nil

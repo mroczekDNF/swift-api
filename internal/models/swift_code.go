@@ -1,7 +1,6 @@
 package models
 
 // SwiftCode modeluje dane dla kodów SWIFT
-// Usunięto GORM i dostosowano do database/sql
 
 type SwiftCode struct {
 	ID            int64  // Unikalny identyfikator (zamiast gorm.Model)
