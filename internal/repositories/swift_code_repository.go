@@ -116,12 +116,27 @@ func (r *SwiftCodeRepository) InsertSwiftCode(swift *models.SwiftCode) error {
 }
 
 func (r *SwiftCodeRepository) GetBranchesByHeadquarter(headquarterCode string) ([]models.SwiftCode, error) {
-	query := `SELECT id, swift_code, bank_name, address, country_iso2, country_name, is_headquarter, headquarter_id
-		FROM swift_codes WHERE headquarter_id = (SELECT id FROM swift_codes WHERE swift_code = $1);`
+	var headquarterID int
 
-	rows, err := r.db.Query(query, headquarterCode)
+	// Pierwsze zapytanie: Pobieramy ID headquarters na podstawie swift_code
+	err := r.db.QueryRow("SELECT id FROM swift_codes WHERE swift_code = $1;", headquarterCode).Scan(&headquarterID)
 	if err != nil {
-		log.Println("Błąd pobierania branchy:", err)
+		if err == sql.ErrNoRows {
+			log.Println("Headquarter not found for SWIFT code:", headquarterCode)
+			return nil, nil // Jeśli nie znaleziono headquarters, zwracamy pustą listę
+		}
+		log.Println("Error retrieving headquarter ID:", err)
+		return nil, err
+	}
+
+	// Drugie zapytanie: Pobieramy listę branchy
+	query := `
+		SELECT id, swift_code, bank_name, address, country_iso2, country_name, is_headquarter, headquarter_id
+		FROM swift_codes WHERE headquarter_id = $1;`
+
+	rows, err := r.db.Query(query, headquarterID)
+	if err != nil {
+		log.Println("Error retrieving branches:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -129,11 +144,22 @@ func (r *SwiftCodeRepository) GetBranchesByHeadquarter(headquarterCode string) (
 	var branches []models.SwiftCode
 	for rows.Next() {
 		var branch models.SwiftCode
-		if err := rows.Scan(&branch.ID, &branch.SwiftCode, &branch.BankName, &branch.Address,
-			&branch.CountryISO2, &branch.CountryName, &branch.IsHeadquarter, &branch.HeadquarterID); err != nil {
-			log.Println("Błąd skanowania branchy:", err)
+		var address sql.NullString // Obsługa potencjalnego NULL w bazie
+
+		err := rows.Scan(&branch.ID, &branch.SwiftCode, &branch.BankName, &address,
+			&branch.CountryISO2, &branch.CountryName, &branch.IsHeadquarter, &branch.HeadquarterID)
+		if err != nil {
+			log.Println("Error scanning branch record:", err)
 			return nil, err
 		}
+
+		// Jeśli adres jest NULL, ustawiamy wartość "UNKNOWN"
+		if address.Valid {
+			branch.Address = address.String
+		} else {
+			branch.Address = "UNKNOWN"
+		}
+
 		branches = append(branches, branch)
 	}
 
