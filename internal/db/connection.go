@@ -36,8 +36,12 @@ func MigrateDatabase() {
 		country_iso2 CHAR(2) NOT NULL,
 		country_name TEXT NOT NULL,
 		is_headquarter BOOLEAN NOT NULL,
-		headquarter_id INT REFERENCES swift_codes(id) ON DELETE SET NULL
-	);`
+		headquarter_id INT
+	);
+
+	-- Dodanie indeksu na headquarter_id dla szybkiego wyszukiwania branchy
+	CREATE INDEX IF NOT EXISTS idx_headquarter_id ON swift_codes (headquarter_id);
+`
 
 	_, err := DB.Exec(query)
 	if err != nil {

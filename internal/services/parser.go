@@ -111,29 +111,25 @@ func createHeadquartersMap(validData [][]string) map[string]int64 {
 			key := swiftCode[:8]
 			if _, exists := headquartersMap[key]; !exists {
 				headquartersMap[key] = idCounter
-				idCounter++
 			}
 		}
+		idCounter++
 	}
 	return headquartersMap
 }
 
 // processValidRecords processes valid records, assigning them IDs and relationships between branches and headquarters.
-// Since IDs are 1-based (starting from 1), records are stored in a preallocated slice at position (ID - 1).
 func processValidRecords(validData [][]string, headquartersMap map[string]int64) []models.SwiftCode {
 	// Preallocate slice based on the number of records.
 	swiftCodes := make([]models.SwiftCode, len(validData))
 
-	// If there are already 3 headquarters, the first branch should get ID = 4.
-	var idBranch int64 = int64(len(headquartersMap)) + 1
-
-	for _, record := range validData {
+	for id, record := range validData {
 		swiftCode := strings.ToUpper(strings.TrimSpace(record[ColumnSwiftCode]))
 		isHeadquarter := strings.HasSuffix(swiftCode, "XXX")
 		countryISO2 := strings.ToUpper(strings.TrimSpace(record[ColumnCountryISO2]))
 
 		swift := models.SwiftCode{
-			ID:            -1, // Temporary value, will be replaced
+			ID:            int64(id), // Temporary value, will be replaced
 			SwiftCode:     swiftCode,
 			BankName:      strings.TrimSpace(record[ColumnBankName]),
 			Address:       strings.TrimSpace(record[ColumnAddress]),
@@ -143,26 +139,16 @@ func processValidRecords(validData [][]string, headquartersMap map[string]int64)
 			HeadquarterID: nil,
 		}
 
-		if isHeadquarter {
+		if !isHeadquarter {
 			key := swiftCode[:8]
 			if hqID, exists := headquartersMap[key]; exists {
-				swift.ID = hqID
-			}
-		} else {
-			// Assign HeadquarterID if a matching headquarters exists.
-			key := swiftCode[:8]
-			if hqID, exists := headquartersMap[key]; exists {
-				swift.HeadquarterID = &hqID
+				swift.HeadquarterID = &hqID //
 			} else {
 				// If a branch does not have a matching headquarters, log a warning.
 				log.Printf("Warning: Branch %s does not have a corresponding headquarters in the map.", swiftCode)
 			}
-			swift.ID = idBranch
-			idBranch++
 		}
-
-		// Store the record in the preallocated slice at position (ID - 1) since IDs are 1-based.
-		swiftCodes[swift.ID-1] = swift
+		swiftCodes[swift.ID] = swift
 	}
 
 	return swiftCodes

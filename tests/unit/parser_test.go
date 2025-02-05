@@ -7,7 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mroczekDNF/swift-api/internal/models"
 	"github.com/mroczekDNF/swift-api/internal/services"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,8 +30,8 @@ func TestParseSwiftCodes(t *testing.T) {
 		{"COUNTRY ISO2 CODE", "SWIFT CODE", "CODE TYPE", "NAME", "ADDRESS", "TOWN NAME", "COUNTRY NAME", "TIME ZONE"},
 		{"PL", "ABCDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},
 		{"PL", "ABCDEFSS001", "BIC11", "Branch Bank", "Branch Street 2", "Krakow", "Poland", "Europe/Warsaw"},
-		{"US", "XYZXYZSSXXX", "BIC11", "US Bank HQ", "Wall Street", "New York", "USA", "America/New_York"},
 		{"US", "XYZXYZSS123", "BIC11", "US Branch", "5th Avenue", "Los Angeles", "USA", "America/New_York"},
+		{"US", "XYZXYZSSXXX", "BIC11", "US Bank HQ", "Wall Street", "New York", "USA", "America/New_York"},
 	}
 	err := createTestCSV(testFilePath, testData)
 	assert.NoError(t, err)
@@ -40,53 +39,37 @@ func TestParseSwiftCodes(t *testing.T) {
 
 	swiftCodes, err := services.ParseSwiftCodes(testFilePath)
 	assert.NoError(t, err)
-	assert.Len(t, swiftCodes, 4) // Expecting 4 records
+	assert.Len(t, swiftCodes, 4) // Oczekujemy 4 rekordów w tej samej kolejności
 
-	// Validate headquarters
+	// Sprawdzanie każdego rekordu w kolejności jego występowania
 	assert.Equal(t, "ABCDEFSSXXX", swiftCodes[0].SwiftCode)
 	assert.True(t, swiftCodes[0].IsHeadquarter)
+	assert.Nil(t, swiftCodes[0].HeadquarterID)
 
-	// Ensure HeadquarterID is nil for all headquarters
-	for _, code := range swiftCodes {
-		if code.IsHeadquarter {
-			assert.Nil(t, code.HeadquarterID, "Headquarter %s should have HeadquarterID == nil", code.SwiftCode)
-		}
-	}
+	assert.Equal(t, "ABCDEFSS001", swiftCodes[1].SwiftCode)
+	assert.False(t, swiftCodes[1].IsHeadquarter)
+	assert.NotNil(t, swiftCodes[1].HeadquarterID)
 
-	// Validate branch
-	assert.Equal(t, "ABCDEFSS001", swiftCodes[2].SwiftCode)
+	// Uwzględniamy indeksowanie od 1 w bazie (HeadquarterID = ID headquarters + 1)
+	assert.Equal(t, swiftCodes[0].ID+1, *swiftCodes[1].HeadquarterID)
+
+	assert.Equal(t, "XYZXYZSS123", swiftCodes[2].SwiftCode)
 	assert.False(t, swiftCodes[2].IsHeadquarter)
+	assert.NotNil(t, swiftCodes[2].HeadquarterID)
+	assert.Equal(t, swiftCodes[3].ID+1, *swiftCodes[2].HeadquarterID)
 
-	// Ensure branch has correct HeadquarterID
-	assert.NotNil(t, swiftCodes[2].HeadquarterID, "Branch ABCDEFSS001 should have a HeadquarterID assigned")
-	assert.Equal(t, swiftCodes[0].ID, *swiftCodes[2].HeadquarterID, "Branch ABCDEFSS001 should be associated with headquarter ABCDEFSSXXX")
-
-	// Validate branch → headquarter mapping
-	branchSwiftCode := "ABCDEFSS001"
-	headquarterSwiftCode := "ABCDEFSSXXX"
-	var branch, headquarter *models.SwiftCode
-	for _, code := range swiftCodes {
-		if code.SwiftCode == branchSwiftCode {
-			branch = &code
-		}
-		if code.SwiftCode == headquarterSwiftCode {
-			headquarter = &code
-		}
-	}
-
-	assert.NotNil(t, branch, "Branch %s should exist in the results", branchSwiftCode)
-	assert.NotNil(t, headquarter, "Headquarter %s should exist in the results", headquarterSwiftCode)
-
-	assert.Equal(t, headquarter.ID, *branch.HeadquarterID, "Branch %s should have HeadquarterID %d, matching headquarter %s", branchSwiftCode, headquarter.ID, headquarterSwiftCode)
+	assert.Equal(t, "XYZXYZSSXXX", swiftCodes[3].SwiftCode)
+	assert.True(t, swiftCodes[3].IsHeadquarter)
+	assert.Nil(t, swiftCodes[3].HeadquarterID)
 }
 
 func TestParseSwiftCodesInvalidData(t *testing.T) {
 	testData := [][]string{
-		{"COUNTRY ISO2 CODE", "SWIFT CODE", "CODE TYPE", "NAME", "ADDRESS", "TOWN NAME", "COUNTRY NAME", "TIME ZONE"}, // Headers
-		{"", "AACDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                 // Missing COUNTRY ISO2 CODE
-		{"PL", "", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                          // Missing SWIFT CODE
-		{"PL", "BBCDEFSSXXX", "", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                    // Missing CODE TYPE
-		{"PL", "CCCDEFSSXXX", "BIC11", "", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                      // Missing NAME
+		{"COUNTRY ISO2 CODE", "SWIFT CODE", "CODE TYPE", "NAME", "ADDRESS", "TOWN NAME", "COUNTRY NAME", "TIME ZONE"},
+		{"", "AACDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},
+		{"PL", "", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},
+		{"PL", "BBCDEFSSXXX", "", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},
+		{"PL", "CCCDEFSSXXX", "BIC11", "", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},
 	}
 
 	testFilePath := "invalid_test.csv"
@@ -97,8 +80,8 @@ func TestParseSwiftCodesInvalidData(t *testing.T) {
 	swiftCodes, err := services.ParseSwiftCodes(testFilePath)
 	assert.NoError(t, err)
 
-	// Ensure no invalid records are processed
-	assert.Len(t, swiftCodes, 0, "Invalid records should not be processed")
+	// Sprawdzamy, czy nie przetworzył błędnych rekordów
+	assert.Len(t, swiftCodes, 0, "Nieprawidłowe rekordy nie powinny zostać przetworzone")
 }
 
 func TestParseSwiftCodesEmptyFile(t *testing.T) {
@@ -107,17 +90,17 @@ func TestParseSwiftCodesEmptyFile(t *testing.T) {
 	defer os.Remove(testFilePath)
 
 	_, err := services.ParseSwiftCodes(testFilePath)
-	assert.Error(t, err)                                                    // Expect an error
-	assert.True(t, errors.Is(err, io.EOF), "Expected io.EOF, got: %v", err) // Ensure it's an EOF error
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, io.EOF), "Oczekiwano io.EOF, otrzymano: %v", err)
 }
 
 func TestParseSwiftCodesMixedData(t *testing.T) {
 	testData := [][]string{
-		{"COUNTRY ISO2 CODE", "SWIFT CODE", "CODE TYPE", "NAME", "ADDRESS", "TOWN NAME", "COUNTRY NAME", "TIME ZONE"}, // Headers
-		{"PL", "ABCDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},               // Valid
-		{"", "ABCDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                 // Missing COUNTRY ISO2 CODE
-		{"PL", "XYZXYZSS123", "BIC11", "Branch Bank", "Branch Street 2", "Krakow", "Poland", "Europe/Warsaw"},         // Valid
-		{"PL", "", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                          // Missing SWIFT CODE
+		{"COUNTRY ISO2 CODE", "SWIFT CODE", "CODE TYPE", "NAME", "ADDRESS", "TOWN NAME", "COUNTRY NAME", "TIME ZONE"},
+		{"PL", "ABCDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},       // Poprawny
+		{"", "ABCDEFSSXXX", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},         // Brak COUNTRY ISO2 CODE
+		{"PL", "XYZXYZSS123", "BIC11", "Branch Bank", "Branch Street 2", "Krakow", "Poland", "Europe/Warsaw"}, // Poprawny
+		{"PL", "", "BIC11", "Bank HQ", "Main Street 1", "Warsaw", "Poland", "Europe/Warsaw"},                  // Brak SWIFT CODE
 	}
 
 	testFilePath := "mixed_test.csv"
@@ -128,8 +111,8 @@ func TestParseSwiftCodesMixedData(t *testing.T) {
 	swiftCodes, err := services.ParseSwiftCodes(testFilePath)
 	assert.NoError(t, err)
 
-	// Ensure only valid records are processed
-	assert.Len(t, swiftCodes, 2, "Expected two valid records")
+	// Sprawdzamy, czy poprawnie przetworzył tylko poprawne rekordy
+	assert.Len(t, swiftCodes, 2, "Oczekiwano dwóch poprawnych rekordów")
 	assert.Equal(t, "ABCDEFSSXXX", swiftCodes[0].SwiftCode)
 	assert.Equal(t, "XYZXYZSS123", swiftCodes[1].SwiftCode)
 }
