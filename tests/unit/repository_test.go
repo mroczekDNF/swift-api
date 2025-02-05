@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/mroczekDNF/swift-api/internal/models"
 	"github.com/mroczekDNF/swift-api/internal/repositories"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestGetBySwiftCode - obsługa rekordu z pełnym adresem
@@ -125,4 +127,99 @@ func TestGetByCountryISO2(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("Niespełnione oczekiwania: %v", err)
 	}
+}
+
+func TestDetachBranchesFromHeadquarter(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := repositories.NewSwiftCodeRepository(db)
+	headquarterID := int64(1)
+
+	// Mockujemy zapytanie
+	query := regexp.QuoteMeta("UPDATE swift_codes SET headquarter_id = NULL WHERE headquarter_id = $1;")
+	mock.ExpectExec(query).WithArgs(headquarterID).WillReturnResult(sqlmock.NewResult(0, 2)) // 2 rekordy zostały zaktualizowane
+
+	// Test funkcji
+	err = repo.DetachBranchesFromHeadquarter(headquarterID)
+	assert.NoError(t, err)
+
+	// Weryfikacja oczekiwań
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestInsertSwiftCode(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := repositories.NewSwiftCodeRepository(db)
+	swift := &models.SwiftCode{
+		SwiftCode:     "ABCDEFSSXXX",
+		BankName:      "Bank HQ",
+		Address:       "Main Street 1",
+		CountryISO2:   "PL",
+		CountryName:   "Poland",
+		IsHeadquarter: true,
+	}
+
+	// Mockujemy zapytanie
+	query := regexp.QuoteMeta(`INSERT INTO swift_codes (swift_code, bank_name, address, country_iso2, country_name, is_headquarter, headquarter_id)
+	VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;`)
+	mock.ExpectQuery(query).
+		WithArgs(swift.SwiftCode, swift.BankName, swift.Address, swift.CountryISO2, swift.CountryName, swift.IsHeadquarter, swift.HeadquarterID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1)) // Zwracamy ID = 1
+
+	// Test funkcji
+	err = repo.InsertSwiftCode(swift)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), swift.ID)
+
+	// Weryfikacja oczekiwań
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetBranchesByHeadquarter(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := repositories.NewSwiftCodeRepository(db)
+	headquarterCode := "ABCDEFSSXXX"
+	headquarterID := 1
+
+	// Mock zapytania do pobrania ID headquarters
+	headquarterQuery := regexp.QuoteMeta("SELECT id FROM swift_codes WHERE swift_code = $1;")
+	mock.ExpectQuery(headquarterQuery).WithArgs(headquarterCode).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(headquarterID))
+
+	// Mock zapytania do pobrania branchy
+	branchesQuery := regexp.QuoteMeta(`
+		SELECT id, swift_code, bank_name, address, country_iso2, country_name, is_headquarter, headquarter_id
+		FROM swift_codes WHERE headquarter_id = $1;`)
+	mock.ExpectQuery(branchesQuery).WithArgs(headquarterID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "swift_code", "bank_name", "address", "country_iso2", "country_name", "is_headquarter", "headquarter_id",
+		}).
+			AddRow(2, "ABCDEFSS001", "Branch Bank", "Branch Street 1", "PL", "Poland", false, headquarterID).
+			AddRow(3, "ABCDEFSS002", "Branch Bank 2", nil, "PL", "Poland", false, headquarterID)) // Adres = NULL
+
+	// Test funkcji
+	branches, err := repo.GetBranchesByHeadquarter(headquarterCode)
+	assert.NoError(t, err)
+	assert.Len(t, branches, 2)
+
+	// Sprawdzanie pierwszego rekordu
+	assert.Equal(t, int64(2), branches[0].ID)
+	assert.Equal(t, "ABCDEFSS001", branches[0].SwiftCode)
+	assert.Equal(t, "Branch Street 1", branches[0].Address)
+
+	// Sprawdzanie drugiego rekordu (adres = UNKNOWN)
+	assert.Equal(t, int64(3), branches[1].ID)
+	assert.Equal(t, "ABCDEFSS002", branches[1].SwiftCode)
+	assert.Equal(t, "UNKNOWN", branches[1].Address)
+
+	// Weryfikacja oczekiwań
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

@@ -6,50 +6,77 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mroczekDNF/swift-api/internal/models"
 	"github.com/mroczekDNF/swift-api/internal/repositories"
 )
 
-// SwiftCodeHandler obsługuje operacje na kodach SWIFT
+// SwiftCodeHandler handles operations on SWIFT codes.
 type SwiftCodeHandler struct {
 	repo *repositories.SwiftCodeRepository
 }
 
-// NewSwiftCodeHandler tworzy nowy handler
+// NewSwiftCodeHandler creates a new handler.
 func NewSwiftCodeHandler(repo *repositories.SwiftCodeRepository) *SwiftCodeHandler {
 	return &SwiftCodeHandler{repo: repo}
 }
 
-// DeleteSwiftCode obsługuje żądanie DELETE /v1/swift-codes/{swift-code}
+// DeleteSwiftCode handles DELETE /v1/swift-codes/{swift-code} requests.
 func (h *SwiftCodeHandler) DeleteSwiftCode(c *gin.Context) {
-	swiftCode := strings.ToUpper(strings.TrimSpace(c.Param("swift-code")))
+	swiftCode := h.getNormalizedSwiftCode(c)
 
-	// Sprawdź, czy kod SWIFT istnieje
-	swift, err := h.repo.GetBySwiftCode(swiftCode)
+	swift, err := h.fetchSwiftCode(swiftCode)
 	if err != nil {
-		log.Println("Błąd pobierania SWIFT code:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd pobierania danych"})
+		h.logErrorAndRespond(c, "Error retrieving SWIFT code", err, http.StatusInternalServerError)
 		return
 	}
 	if swift == nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "SWIFT code nie znaleziony"})
+		h.respondNotFound(c, "SWIFT code not found")
 		return
 	}
 
-	// Jeśli kod to headquarter, usuń powiązania branchy
+	if err := h.detachBranchesIfHeadquarter(swift); err != nil {
+		h.logErrorAndRespond(c, "Error detaching branches", err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.deleteSwiftCode(swiftCode); err != nil {
+		h.logErrorAndRespond(c, "Error deleting SWIFT code", err, http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code deleted successfully"})
+}
+
+// getNormalizedSwiftCode retrieves and normalizes the swift code from the URL parameter.
+func (h *SwiftCodeHandler) getNormalizedSwiftCode(c *gin.Context) string {
+	return strings.ToUpper(strings.TrimSpace(c.Param("swift-code")))
+}
+
+// fetchSwiftCode retrieves the SWIFT code details from the repository.
+func (h *SwiftCodeHandler) fetchSwiftCode(swiftCode string) (*models.SwiftCode, error) {
+	return h.repo.GetBySwiftCode(swiftCode)
+}
+
+// detachBranchesIfHeadquarter detaches branches from a record if it is a headquarter.
+func (h *SwiftCodeHandler) detachBranchesIfHeadquarter(swift *models.SwiftCode) error {
 	if swift.IsHeadquarter {
-		if err := h.repo.DetachBranchesFromHeadquarter(swift.ID); err != nil {
-			log.Println("Błąd odłączania branchy:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd aktualizacji branchy"})
-			return
-		}
+		return h.repo.DetachBranchesFromHeadquarter(swift.ID)
 	}
+	return nil
+}
 
-	// Usuń kod SWIFT
-	if err := h.repo.DeleteSwiftCode(swiftCode); err != nil {
-		log.Println("Błąd usuwania SWIFT code:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Błąd usuwania SWIFT code"})
-		return
-	}
+// deleteSwiftCode deletes the SWIFT code using the repository.
+func (h *SwiftCodeHandler) deleteSwiftCode(swiftCode string) error {
+	return h.repo.DeleteSwiftCode(swiftCode)
+}
 
-	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code usunięty"})
+// logErrorAndRespond logs the error and sends a JSON response.
+func (h *SwiftCodeHandler) logErrorAndRespond(c *gin.Context, message string, err error, statusCode int) {
+	log.Printf("%s: %v", message, err)
+	c.JSON(statusCode, gin.H{"message": message})
+}
+
+// respondNotFound sends a not found JSON response.
+func (h *SwiftCodeHandler) respondNotFound(c *gin.Context, message string) {
+	c.JSON(http.StatusNotFound, gin.H{"message": message})
 }
