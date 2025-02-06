@@ -7,18 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mroczekDNF/swift-api/internal/models"
-	"github.com/mroczekDNF/swift-api/internal/repositories"
 )
-
-// SwiftCodeHandler handles operations on SWIFT codes.
-type SwiftCodeHandler struct {
-	repo *repositories.SwiftCodeRepository
-}
-
-// NewSwiftCodeHandler creates a new handler.
-func NewSwiftCodeHandler(repo *repositories.SwiftCodeRepository) *SwiftCodeHandler {
-	return &SwiftCodeHandler{repo: repo}
-}
 
 // DeleteSwiftCode handles DELETE /v1/swift-codes/{swift-code} requests.
 func (h *SwiftCodeHandler) DeleteSwiftCode(c *gin.Context) {

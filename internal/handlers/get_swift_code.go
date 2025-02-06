@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
-// GetSwiftCodeDetails zwraca szczegóły dla danego SWIFT code
+// GetSwiftCodeDetails zwraca szczegóły dla danego SWIFT code.
 func (h *SwiftCodeHandler) GetSwiftCodeDetails(c *gin.Context) {
 	swiftCode := strings.TrimSpace(c.Param("swiftCode"))
 
@@ -25,17 +26,6 @@ func (h *SwiftCodeHandler) GetSwiftCodeDetails(c *gin.Context) {
 		return
 	}
 
-	// Jeśli to headquarter, znajdź wszystkie branche
-	var branches []models.SwiftCode
-	if swift.IsHeadquarter {
-		branches, err = h.repo.GetBranchesByHeadquarter(swift.SwiftCode)
-		if err != nil {
-			log.Println("Błąd pobierania branchy:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania branchy"})
-			return
-		}
-	}
-
 	// Struktura odpowiedzi
 	response := gin.H{
 		"address":       swift.Address,
@@ -44,7 +34,22 @@ func (h *SwiftCodeHandler) GetSwiftCodeDetails(c *gin.Context) {
 		"countryName":   swift.CountryName,
 		"isHeadquarter": swift.IsHeadquarter,
 		"swiftCode":     swift.SwiftCode,
-		"branches":      branches,
+	}
+
+	// Jeśli to headquarters, dodaj branches do odpowiedzi
+	if swift.IsHeadquarter {
+		branches, err := h.repo.GetBranchesByHeadquarter(swift.SwiftCode)
+		if err != nil && err != sql.ErrNoRows { // Jeśli to poważny błąd, zwracamy 500
+			log.Println("Błąd pobierania branchy:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania branchy"})
+			return
+		}
+
+		// Jeśli brak branchy, zwracamy pustą listę
+		if len(branches) == 0 {
+			branches = []models.SwiftCode{}
+		}
+		response["branches"] = branches
 	}
 
 	c.JSON(http.StatusOK, response)

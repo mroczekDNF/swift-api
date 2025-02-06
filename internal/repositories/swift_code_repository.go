@@ -7,6 +7,16 @@ import (
 	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
+// SwiftCodeRepositoryInterface opisuje metody repozytorium
+type SwiftCodeRepositoryInterface interface {
+	GetBySwiftCode(code string) (*models.SwiftCode, error)
+	GetByCountryISO2(countryISO2 string) ([]models.SwiftCode, error)
+	DeleteSwiftCode(code string) error
+	DetachBranchesFromHeadquarter(headquarterID int64) error
+	InsertSwiftCode(swift *models.SwiftCode) error
+	GetBranchesByHeadquarter(headquarterCode string) ([]models.SwiftCode, error)
+}
+
 // SwiftCodeRepository obsługuje operacje na tabeli swift_codes
 type SwiftCodeRepository struct {
 	db *sql.DB
