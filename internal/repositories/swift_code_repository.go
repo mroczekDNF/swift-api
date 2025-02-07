@@ -61,7 +61,7 @@ func (r *SwiftCodeRepository) GetBySwiftCode(code string) (*models.SwiftCode, er
 		if err == sql.ErrNoRows {
 			return nil, nil // Brak wyniku – nie logujemy
 		}
-		log.Println("Błąd zapytania do bazy danych w GetBySwiftCode:", err) // Logowanie krytycznych błędów
+		log.Println("Błąd zapytania do bazy danych w GetBySwiftCode:", err)
 		return nil, err
 	}
 	return swift, nil
@@ -76,7 +76,7 @@ func (r *SwiftCodeRepository) GetByCountryISO2(countryISO2 string) ([]models.Swi
 
 	rows, err := r.db.Query(query, countryISO2)
 	if err != nil {
-		log.Println("Błąd zapytania do bazy danych w GetByCountryISO2:", err) // Logowanie krytycznych błędów
+		log.Println("Błąd zapytania do bazy danych w GetByCountryISO2:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -85,7 +85,7 @@ func (r *SwiftCodeRepository) GetByCountryISO2(countryISO2 string) ([]models.Swi
 	for rows.Next() {
 		swift, err := scanSwiftCode(rows)
 		if err != nil {
-			return nil, err // Krytyczne błędy zwracamy bez logowania (logujemy je w warstwie wyżej)
+			return nil, err
 		}
 		swiftCodes = append(swiftCodes, *swift)
 	}
@@ -96,11 +96,10 @@ func (r *SwiftCodeRepository) GetByCountryISO2(countryISO2 string) ([]models.Swi
 	return swiftCodes, nil
 }
 
-// DeleteSwiftCode usuwa kod SWIFT z bazy danych.
 func (r *SwiftCodeRepository) DeleteSwiftCode(code string) error {
 	query := "DELETE FROM swift_codes WHERE swift_code = $1;"
 	if _, err := r.db.Exec(query, code); err != nil {
-		log.Println("Błąd usuwania SWIFT code:", err) // Logowanie tylko poważnych błędów
+		log.Println("Błąd usuwania SWIFT code:", err)
 		return err
 	}
 	return nil
@@ -110,7 +109,7 @@ func (r *SwiftCodeRepository) DeleteSwiftCode(code string) error {
 func (r *SwiftCodeRepository) DetachBranchesFromHeadquarter(headquarterID int64) error {
 	query := "UPDATE swift_codes SET headquarter_id = NULL WHERE headquarter_id = $1;"
 	if _, err := r.db.Exec(query, headquarterID); err != nil {
-		log.Println("Błąd odłączania branchy w DetachBranchesFromHeadquarter:", err) // Logowanie krytycznych błędów
+		log.Println("Błąd odłączania branchy w DetachBranchesFromHeadquarter:", err)
 		return err
 	}
 	return nil
@@ -167,7 +166,7 @@ func (r *SwiftCodeRepository) GetBranchesByHeadquarter(headquarterCode string) (
 	}
 
 	if len(branches) == 0 {
-		return nil, sql.ErrNoRows // Brak branchy – nie logujemy
+		return nil, sql.ErrNoRows
 	}
 	return branches, nil
 }

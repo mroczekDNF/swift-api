@@ -140,6 +140,8 @@ func createHeadquartersMap(validData [][]string) map[string]int64 {
 
 // processValidRecords processes valid records, assigning them IDs and establishing relationships
 // between branches and headquarters.
+// processValidRecords processes valid records, assigning them IDs and establishing relationships
+// between branches and headquarters.
 func processValidRecords(validData [][]string, headquartersMap map[string]int64) []models.SwiftCode {
 	// Preallocate slice based on the number of records.
 	swiftCodes := make([]models.SwiftCode, len(validData))
@@ -149,11 +151,17 @@ func processValidRecords(validData [][]string, headquartersMap map[string]int64)
 		isHeadquarter := strings.HasSuffix(swiftCode, headquartersSuffix)
 		countryISO2 := strings.ToUpper(strings.TrimSpace(record[ColumnCountryISO2]))
 
+		// Sprawdź, czy adres jest pusty, i ustaw "UNKNOWN" w takim przypadku
+		address := strings.TrimSpace(record[ColumnAddress])
+		if address == "" {
+			address = "UNKNOWN"
+		}
+
 		swift := models.SwiftCode{
 			ID:            int64(idx), // Temporary value, which may be replaced later.
 			SwiftCode:     swiftCode,
 			BankName:      strings.TrimSpace(record[ColumnBankName]),
-			Address:       strings.TrimSpace(record[ColumnAddress]),
+			Address:       address,
 			CountryISO2:   countryISO2,
 			CountryName:   strings.TrimSpace(record[ColumnCountryName]),
 			IsHeadquarter: isHeadquarter,
