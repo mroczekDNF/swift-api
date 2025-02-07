@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Sterownik PostgreSQL dla database/sql
@@ -58,4 +59,27 @@ func CloseDatabase() {
 	}
 
 	log.Println("Połączenie z bazą danych zamknięte")
+}
+
+// DeleteDatabase usuwa bazę danych
+func DeleteDatabase(host, port, user, password, dbName string) {
+	// Tworzymy DSN do połączenia z systemową bazą PostgreSQL (bez dbname)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s sslmode=disable", host, port, user, password)
+
+	// Łączymy się z PostgreSQL
+	conn, err := sql.Open("pgx", dsn)
+	if err != nil {
+		log.Printf("Nie udało się połączyć z PostgreSQL w celu usunięcia bazy danych: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	// Wykonujemy zapytanie do usunięcia bazy danych
+	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)
+	if _, err := conn.Exec(query); err != nil {
+		log.Printf("Nie udało się usunąć bazy danych %s: %v", dbName, err)
+		return
+	}
+
+	log.Printf("Baza danych %s została pomyślnie usunięta!", dbName)
 }

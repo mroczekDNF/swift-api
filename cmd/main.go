@@ -29,7 +29,15 @@ func main() {
 
 	// Inicjalizacja połączenia z bazą danych
 	db.InitDatabase(dsn)
-	defer db.CloseDatabase() // Zamknięcie połączenia po zakończeniu działania programu
+
+	// Ustaw deferred działania
+	defer func() {
+		// Zamknięcie połączenia z bazą danych
+		db.CloseDatabase()
+
+		// Usunięcie bazy danych
+		db.DeleteDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
+	}()
 
 	// Migracja bazy danych
 	db.MigrateDatabase()
