@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testDBURL = "postgres://testuser:testpassword@localhost:5433/swift_test_db?sslmode=disable"
+const testDBURL = "postgres://testuser:testpassword@localhost:5432/swift_test_db?sslmode=disable"
 
 // SetupTestDatabase przygotowuje bazę danych do testów integracyjnych
 func SetupTestDatabase(t *testing.T) {
