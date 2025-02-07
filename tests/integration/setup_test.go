@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testDBURL = "postgres://testuser:testpassword@localhost:5432/swift_test_db?sslmode=disable"
+const testDBURL = "postgres://testuser:testpassword@localhost:5433/swift_test_db?sslmode=disable"
 
 // SetupTestDatabase przygotowuje bazę danych do testów integracyjnych
 func SetupTestDatabase(t *testing.T) {
@@ -34,7 +34,6 @@ func SetupTestDatabase(t *testing.T) {
 	err = services.SaveSwiftCodesToDatabase(db.DB, records)
 	assert.NoError(t, err, "Błąd zapisu danych testowych")
 
-	log.Println("Baza testowa gotowa do testów")
 }
 
 // CleanupTestDatabase czyści dane z testowej bazy danych po zakończeniu testu
