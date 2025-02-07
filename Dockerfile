@@ -11,6 +11,10 @@ RUN go mod download
 # Skopiuj całą aplikację
 COPY . .
 
+# Upewnij się, że pliki CSV są dostępne we właściwej lokalizacji
+# Kopiujemy katalog data do katalogu /app/cmd/data
+RUN mkdir -p /app/cmd/data && cp -r /app/data/* /app/cmd/data/
+
 # Zmień katalog na ten zawierający `main.go`
 WORKDIR /app/cmd
 
