@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/mroczekDNF/swift-api/internal/db"
 	"github.com/mroczekDNF/swift-api/internal/routes"
 	"github.com/mroczekDNF/swift-api/internal/services"
@@ -12,6 +13,7 @@ import (
 
 func main() {
 	// Pobierz dane do połączenia z bazy danych z ENV
+	gin.SetMode(gin.ReleaseMode)
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
