@@ -29,26 +29,33 @@ func main() {
 
 	// Inicjalizacja połączenia z bazą danych
 	db.InitDatabase(dsn)
-
-	// Ustaw deferred działania
 	defer db.CloseDatabase()
 
 	// Migracja bazy danych
 	db.MigrateDatabase()
 
-	// Parsowanie pliku CSV
-	filePath := "data/swift_codes.csv"
-	swiftCodes, err := services.ParseSwiftCodes(filePath)
+	// Sprawdzenie, czy tabela `swift_codes` jest pusta
+	isEmpty, err := db.IsTableEmpty("swift_codes")
 	if err != nil {
-		log.Fatalf("Błąd parsowania SWIFT codes: %v", err)
+		log.Fatalf("Błąd podczas sprawdzania zawartości tabeli `swift_codes`: %v", err)
 	}
 
-	// Zapisanie danych do bazy
-	if err := services.SaveSwiftCodesToDatabase(db.DB, swiftCodes); err != nil {
-		log.Fatalf("Błąd zapisu SWIFT codes do bazy: %v", err)
-	}
+	// Jeśli tabela jest pusta, parsuj dane i zapisuj je w bazie
+	if isEmpty {
+		log.Println("Tabela `swift_codes` jest pusta. Parsowanie danych...")
+		filePath := "data/swift_codes.csv"
+		swiftCodes, err := services.ParseSwiftCodes(filePath)
+		if err != nil {
+			log.Fatalf("Błąd parsowania SWIFT codes: %v", err)
+		}
 
-	log.Println("Dane zostały pomyślnie zapisane w bazie!")
+		if err := services.SaveSwiftCodesToDatabase(db.DB, swiftCodes); err != nil {
+			log.Fatalf("Błąd zapisu SWIFT codes do bazy: %v", err)
+		}
+		log.Println("Dane zostały pomyślnie zapisane w bazie!")
+	} else {
+		log.Println("Tabela `swift_codes` zawiera dane. Parsowanie pominięte.")
+	}
 
 	// Uruchomienie serwera
 	r := routes.SetupRouter(db.DB)

@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -63,4 +64,15 @@ func CloseDatabase() {
 	}
 
 	log.Println("Połączenie z bazą danych zamknięte")
+}
+
+// IsTableEmpty sprawdza, czy tabela jest pusta
+func IsTableEmpty(tableName string) (bool, error) {
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+	var count int
+	err := DB.QueryRow(query).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
 }
