@@ -1,23 +1,22 @@
-# Użyj oficjalnego obrazu Go jako podstawy
-FROM golang:1.20
+# Wybierz obraz Go jako bazę
+FROM golang:1.23-alpine
 
-# Ustaw katalog roboczy w kontenerze
+# Ustaw katalog roboczy
 WORKDIR /app
 
-# Skopiuj pliki projektu do kontenera
+# Skopiuj pliki zależności
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Skopiuj całą aplikację
 COPY . .
 
-# Przejdź do katalogu, w którym znajduje się główny plik aplikacji
+# Zmień katalog na ten zawierający `main.go`
 WORKDIR /app/cmd
 
 # Buduj aplikację
-RUN go build -o /app/main .
+RUN go build -o main .
 
-# Ustawienie punktu wejścia
-CMD ["/app/main"]
-
-# Otwórz port aplikacji
+# Ustaw domyślny punkt wejścia
 EXPOSE 8080
+CMD ["./main"]

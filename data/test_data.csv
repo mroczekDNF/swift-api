@@ -1,0 +1,20 @@
+COUNTRY ISO2 CODE,SWIFT CODE,CODE TYPE,NAME,ADDRESS,TOWN NAME,COUNTRY NAME,TIME ZONE
+US,BANKUS33XXX,HQ,Test Bank USA,123 Test St,New York,United States,EST
+US,BANKUS33ABC,BRANCH,Test Bank Branch A,456 Test Ave,New York,United States,EST
+US,BANKUS33DEF,BRANCH,Test Bank Branch B,789 Test Blvd,Los Angeles,United States,PST
+DE,BANKDE44XXX,HQ,Deutsche Bank HQ,123 Berlin Str,Berlin,Germany,CET
+FR,BANKFR55XXX,HQ,Credit Agricole HQ,456 Paris Ave,Paris,France,CET
+GB,BANKGB22AAA,BRANCH,Independent Branch UK,789 London Blvd,London,United Kingdom,GMT
+JP,BANKJP11XYZ,BRANCH,Independent Branch JP,,Tokyo,Japan,JST
+CA,BANKCA66XXX,HQ,Canadian Bank HQ,456 Maple St,Toronto,Canada,EST
+CA,BANKCA77AAA,BRANCH,Canadian Bank Branch A,789 Maple Blvd,Vancouver,Canada,PST
+CA,BANKCA88BBB,BRANCH,Canadian Bank Branch B,456 Oak St,Calgary,Canada,MST
+AU,BANKAU99XXX,HQ,Aussie Bank HQ,123 Sydney Rd,Sydney,Australia,AEST
+AU,BANKAU00AAA,BRANCH,Aussie Bank Branch A,789 Perth St,Perth,Australia,AWST
+IN,BANKIN77XXX,HQ,State Bank of India HQ,Mumbai Central,Mumbai,India,IST
+IN,BANKIN88AAA,BRANCH,State Bank Branch A,Delhi St,Delhi,India,IST
+IN,BANKIN99BBB,BRANCH,State Bank Branch B,Chennai St,Chennai,India,IST
+BR,BANKBR22CCC,BRANCH,Banco do Brasil Branch A,Rio Street,Rio de Janeiro,Brazil,BRT
+BR,BANKBR33DDD,BRANCH,Banco do Brasil Branch B,,Sao Paulo,Brazil,BRT
+ZA,BANKZA44EEE,BRANCH,South African Branch A,Cape Town Blvd,Cape Town,South Africa,SAST
+ZA,BANKZA55FFF,BRANCH,South African Branch B,,Johannesburg,South Africa,SAST

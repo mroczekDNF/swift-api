@@ -10,14 +10,6 @@ import (
 	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
-// Globalne wyrażenia regularne dla optymalizacji
-var (
-	// Kod kraju: dokładnie 2 wielkie litery.
-	countryISO2Regex = regexp.MustCompile(`^[A-Z]{2}$`)
-	// SWIFT: 4 litery (banku), 2 litery (kraju), 2 alfanumeryczne (lokalizacji), opcjonalnie 3 alfanumeryczne (oddziału).
-	swiftCodeRegex = regexp.MustCompile(`^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$`)
-)
-
 type SwiftCodeRequest struct {
 	Address       string `json:"address"`
 	BankName      string `json:"bankName" binding:"required"`
@@ -34,7 +26,6 @@ func (h *SwiftCodeHandler) AddSwiftCode(c *gin.Context) {
 		return
 	}
 
-	// Sprawdzenie czy pole IsHeadquarter nie jest nil.
 	if request.IsHeadquarter == nil {
 		respondWithError(c, http.StatusBadRequest, "Field 'isHeadquarter' is required")
 		return
@@ -59,7 +50,7 @@ func (h *SwiftCodeHandler) AddSwiftCode(c *gin.Context) {
 	}
 
 	newSwiftCode := createSwiftCodeModel(&request)
-	if err := assignHeadquarterID(h, &newSwiftCode); err != nil {
+	if err := assignHeadquarterID(h, &newSwiftCode, request.SwiftCode); err != nil {
 		respondWithError(c, http.StatusInternalServerError, "Error finding headquarter")
 		return
 	}
@@ -86,18 +77,11 @@ func normalizeSwiftCodeRequest(request *SwiftCodeRequest) {
 }
 
 func validateSwiftCodeRequest(request *SwiftCodeRequest) error {
-	// Sprawdzamy długość kodu SWIFT.
 	if len(request.SwiftCode) < 8 || len(request.SwiftCode) > 11 {
 		return &ValidationError{"Invalid SWIFT code length. Must be between 8 and 11 characters."}
 	}
 
-	// Walidacja formatu SWIFT
-	if !swiftCodeRegex.MatchString(request.SwiftCode) {
-		return &ValidationError{"Invalid SWIFT code format. Expected format: 4 letters, 2 letters, 2 alphanumeric characters and optional 3 alphanumeric characters."}
-	}
-
-	// Walidacja kodu kraju
-	if len(request.CountryISO2) != 2 || !countryISO2Regex.MatchString(request.CountryISO2) {
+	if len(request.CountryISO2) != 2 || !regexp.MustCompile(`^[A-Z]{2}$`).MatchString(request.CountryISO2) {
 		return &ValidationError{"Invalid country ISO2 code. Must be exactly 2 uppercase letters."}
 	}
 
@@ -131,12 +115,9 @@ func createSwiftCodeModel(request *SwiftCodeRequest) models.SwiftCode {
 	}
 }
 
-// assignHeadquarterID ustawia HeadquarterID dla SwiftCode, jeśli dany kod nie jest headquarter.
-// Wyszukuje headquarter przy pomocy pierwszych 8 znaków SwiftCode, uzupełniając końcówkę "XXX".
-func assignHeadquarterID(h *SwiftCodeHandler, newSwiftCode *models.SwiftCode) error {
+func assignHeadquarterID(h *SwiftCodeHandler, newSwiftCode *models.SwiftCode, swiftCode string) error {
 	if !newSwiftCode.IsHeadquarter {
-		headquarterCode := newSwiftCode.SwiftCode[:8] + "XXX"
-		headquarter, err := h.repo.GetBySwiftCode(headquarterCode)
+		headquarter, err := h.repo.GetBySwiftCode(swiftCode[:8] + "XXX")
 		if err != nil {
 			log.Println("Error finding headquarter:", err)
 			return err

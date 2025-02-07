@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: swift-api-test-db
+    restart: always
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: swift_test_db
+    ports:
+      - "5433:5432" # Używamy portu 5433, żeby nie kolidować z lokalną bazą
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql # Automatycznie tworzymy tabelę
+
+volumes:
+  pgdata:
