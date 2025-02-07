@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
-	// Przygotowanie routera i mock repozytorium
+	// Prepare the router and mock repository
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 
@@ -23,7 +23,7 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 	handler := handlers.NewSwiftCodeHandler(mockRepo)
 	router.GET("/swift-codes/:swiftCode", handler.GetSwiftCodeDetails)
 
-	// Przykładowy SWIFT code dla headquarters
+	// Example SWIFT code for headquarters
 	swiftCode := "BANKUS33XXX"
 	mockSwift := &models.SwiftCode{
 		ID:            1,
@@ -33,10 +33,10 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 		CountryName:   "United States",
 		IsHeadquarter: true,
 		Address:       "123 Test St",
-		HeadquarterID: nil, // Headquarters powinien mieć nil
+		HeadquarterID: nil, // Headquarters should have nil
 	}
 
-	// Konfiguracja mocka dla headquarters
+	// Mock configuration for headquarters
 	mockRepo.On("GetBySwiftCode", swiftCode).Return(mockSwift, nil)
 	mockRepo.On("GetBranchesByHeadquarter", swiftCode).Return([]models.SwiftCode{
 		{
@@ -47,46 +47,51 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 			CountryName:   "United States",
 			IsHeadquarter: false,
 			Address:       "456 Test Ave",
-			HeadquarterID: &mockSwift.ID, // Wskazuje na headquarters
+			HeadquarterID: &mockSwift.ID, // Points to headquarters
 		},
 	}, nil)
 
-	// Testowe żądanie
+	// Test request
 	req, _ := http.NewRequest("GET", "/swift-codes/"+swiftCode, nil)
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)
 
-	// Sprawdzanie odpowiedzi
+	// Check the response
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
 	var response map[string]interface{}
 	err := json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
-	fmt.Printf("DEBUG: Odpowiedź API: %s\n", recorder.Body.String())
+	fmt.Printf("DEBUG: API Response: %s\n", recorder.Body.String())
 
-	// Weryfikacja pól odpowiedzi dla headquarters
+	// Verify the fields for headquarters
 	assert.Equal(t, swiftCode, response["swiftCode"])
 	assert.Equal(t, "Test Bank", response["bankName"])
 	assert.Equal(t, "US", response["countryISO2"])
 	assert.Equal(t, "United States", response["countryName"])
 	assert.True(t, response["isHeadquarter"].(bool))
 
-	// // Weryfikacja branchy
+	// Verify branches
 	branches, branchesExist := response["branches"].([]interface{})
 	assert.True(t, branchesExist, "branches field should exist for headquarters")
 	assert.Len(t, branches, 1)
 
-	branch := branches[0].(map[string]interface{})
-	assert.Equal(t, "BANKUS33ABC", branch["SwiftCode"])
-	assert.Equal(t, "Test Bank Branch", branch["BankName"])
+	// Fix branch assertions
+	branchData, ok := branches[0].(map[string]interface{})
+	assert.True(t, ok, "Branch data should be a map[string]interface{}")
+	assert.Equal(t, "BANKUS33ABC", branchData["swiftCode"])
+	assert.Equal(t, "Test Bank Branch", branchData["bankName"])
+	assert.Equal(t, "US", branchData["countryISO2"])
+	assert.Equal(t, "United States", branchData["countryName"])
+	assert.Equal(t, "456 Test Ave", branchData["address"])
 
 	mockRepo.AssertExpectations(t)
 }
 
 func TestGetSwiftCodeDetails_Headquarter_NoBranches(t *testing.T) {
-	// Sprawdzamy, czy headquarters może istnieć bez branchy (branches == [])
+	// Check if a headquarters can exist without branches (branches == [])
 
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
@@ -108,7 +113,7 @@ func TestGetSwiftCodeDetails_Headquarter_NoBranches(t *testing.T) {
 	}
 
 	mockRepo.On("GetBySwiftCode", swiftCode).Return(mockSwift, nil)
-	mockRepo.On("GetBranchesByHeadquarter", swiftCode).Return([]models.SwiftCode{}, nil) // Brak branchy
+	mockRepo.On("GetBranchesByHeadquarter", swiftCode).Return([]models.SwiftCode{}, nil) // No branches
 
 	req, _ := http.NewRequest("GET", "/swift-codes/"+swiftCode, nil)
 	recorder := httptest.NewRecorder()
@@ -126,16 +131,16 @@ func TestGetSwiftCodeDetails_Headquarter_NoBranches(t *testing.T) {
 	assert.Equal(t, "United States", response["countryName"])
 	assert.True(t, response["isHeadquarter"].(bool))
 
-	// Powinno zwracać pustą listę branchy
+	// Should return an empty list of branches
 	branches, branchesExist := response["branches"].([]interface{})
 	assert.True(t, branchesExist, "branches field should exist for headquarters")
-	assert.Len(t, branches, 0) // Brak branchy
+	assert.Len(t, branches, 0) // No branches
 
 	mockRepo.AssertExpectations(t)
 }
 
 func TestGetSwiftCodeDetails_Branch(t *testing.T) {
-	// Przykładowy SWIFT code dla branch'a
+	// Example SWIFT code for a branch
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 
@@ -153,7 +158,7 @@ func TestGetSwiftCodeDetails_Branch(t *testing.T) {
 		CountryName:   "United States",
 		IsHeadquarter: false,
 		Address:       "456 Test Ave",
-		HeadquarterID: &headquarterID, // Branch wskazuje na headquarters
+		HeadquarterID: &headquarterID,
 	}
 
 	mockRepo.On("GetBySwiftCode", swiftCode).Return(mockSwift, nil)
@@ -174,7 +179,6 @@ func TestGetSwiftCodeDetails_Branch(t *testing.T) {
 	assert.Equal(t, "United States", response["countryName"])
 	assert.False(t, response["isHeadquarter"].(bool))
 
-	// Branch NIE powinien zawierać "branches"
 	_, branchesExist := response["branches"]
 	assert.False(t, branchesExist, "branches field should NOT exist for branch SWIFT code")
 
