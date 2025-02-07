@@ -16,6 +16,3 @@ Thumbs.db
 # Konfiguracja IDE
 .idea/
 .vscode/
-
-# Pliki Go mod
-/go.sum
