@@ -61,26 +61,15 @@ You should receive a response with SWIFT code data, verifying that the API is ru
 
 ### GET: `/v1/swift-codes/{swiftCode}`
 - **Description**: Fetches details of a specific SWIFT code.
-- **Response**: Includes information about the SWIFT code, associated bank, country, and whether it is a headquarter.
+
+### GET: `/v1/swift-codes/{swiftCode}`
+- **Description**: Fetches details of SWIFT code data for a specific country.
 
 ### POST: `/v1/swift-codes`
 - **Description**: Adds a new SWIFT code to the database.
-- **Request Body**:
-  ```json
-  {
-    "swiftCode": "NEWCODE01XXX",
-    "bankName": "New Bank",
-    "address": "New Street",
-    "countryISO2": "US",
-    "countryName": "United States",
-    "isHeadquarter": true
-  }
-  ```
 
 ### DELETE: `/v1/swift-codes/{swiftCode}`
 - **Description**: Deletes a SWIFT code from the database.
-
----
 
 ## Running Tests
 
@@ -120,5 +109,3 @@ docker-compose -f docker-compose_test.yml down --volumes
 - The API is set to use `localhost:8080` for the main application and `localhost:5433` for the test database.
 
 ---
-
-Let me know if you'd like to make further changes or add more details!
