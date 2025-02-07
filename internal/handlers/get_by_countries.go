@@ -6,31 +6,33 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	// Załóżmy, że masz tutaj model SwiftCode
+	"github.com/mroczekDNF/swift-api/internal/models"
 )
 
-// GetSwiftCodesByCountry zwraca SWIFT codes w nowym formacie odpowiedzi
+// GetSwiftCodesByCountry returns SWIFT codes in a new response format
 func (h *SwiftCodeHandler) GetSwiftCodesByCountry(c *gin.Context) {
 	countryISO2 := strings.ToUpper(strings.TrimSpace(c.Param("countryISO2")))
 
-	// Pobierz SWIFT codes dla danego kraju
 	swiftCodes, err := h.repo.GetByCountryISO2(countryISO2)
 	if err != nil {
-		log.Println("Błąd pobierania SWIFT codes:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania SWIFT codes"})
+		log.Println("Error fetching SWIFT codes:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching SWIFT codes"})
 		return
 	}
 
-	// Jeśli nie znaleziono żadnych rekordów
 	if len(swiftCodes) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Brak SWIFT codes dla podanego kraju"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No SWIFT codes found for the given country"})
 		return
 	}
 
-	// Ustaw nazwę kraju na podstawie pierwszego rekordu
+	response := formatSwiftCodesResponse(countryISO2, swiftCodes)
+	c.JSON(http.StatusOK, response)
+}
+
+// formatSwiftCodesResponse formats the SWIFT codes into the expected response structure
+func formatSwiftCodesResponse(countryISO2 string, swiftCodes []models.SwiftCode) gin.H {
 	countryName := swiftCodes[0].CountryName
 
-	// Przekształcenie wyników do nowej struktury
 	var formattedSwiftCodes []gin.H
 	for _, code := range swiftCodes {
 		formattedSwiftCodes = append(formattedSwiftCodes, gin.H{
@@ -42,12 +44,9 @@ func (h *SwiftCodeHandler) GetSwiftCodesByCountry(c *gin.Context) {
 		})
 	}
 
-	// Tworzenie odpowiedzi
-	response := gin.H{
+	return gin.H{
 		"countryISO2": countryISO2,
 		"countryName": countryName,
 		"swiftCodes":  formattedSwiftCodes,
 	}
-
-	c.JSON(http.StatusOK, response)
 }

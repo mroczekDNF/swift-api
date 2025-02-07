@@ -8,7 +8,7 @@ import (
 	"github.com/mroczekDNF/swift-api/internal/repositories"
 )
 
-// SetupRouter definiuje endpointy API
+// SetupRouter defines API endpoints
 func SetupRouter(db *sql.DB) *gin.Engine {
 	router := gin.Default()
 

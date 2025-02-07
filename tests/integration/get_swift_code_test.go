@@ -29,7 +29,7 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, req)
 
-	log.Printf("Odpowiedź JSON: %s", recorder.Body.String())
+	log.Printf("JSON Response: %s", recorder.Body.String())
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
@@ -37,7 +37,7 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 	err := json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
-	log.Printf("Sprawdzane klucze w JSON: %+v", response)
+	log.Printf("Checking JSON keys: %+v", response)
 
 	assert.Equal(t, "BANKUS33XXX", response["swiftCode"])
 	assert.Equal(t, "Test Bank USA", response["bankName"])
@@ -46,10 +46,10 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 	assert.True(t, response["isHeadquarter"].(bool))
 
 	branches, branchesExist := response["branches"].([]interface{})
-	assert.True(t, branchesExist, "Pole 'branches' powinno istnieć")
-	assert.Len(t, branches, 2, "Powinny być dokładnie 2 branche")
+	assert.True(t, branchesExist, "The 'branches' field should exist")
+	assert.Len(t, branches, 2, "There should be exactly 2 branches")
 
-	log.Println("Dane branchy w odpowiedzi:")
+	log.Println("Branch data in response:")
 	expectedBranches := map[string]string{
 		"BANKUS33ABC": "Test Bank Branch A",
 		"BANKUS33DEF": "Test Bank Branch B",
@@ -61,7 +61,7 @@ func TestGetSwiftCodeDetails_Headquarter(t *testing.T) {
 		bankName, _ := branchData["bankName"].(string)
 
 		expectedName, exists := expectedBranches[swiftCode]
-		assert.True(t, exists, "Nieoczekiwany branch: "+swiftCode)
+		assert.True(t, exists, "Unexpected branch: "+swiftCode)
 		assert.Equal(t, expectedName, bankName)
 	}
 }
@@ -81,7 +81,7 @@ func TestGetSwiftCodeDetails_HQWithoutBranches(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, req)
 
-	log.Printf("Odpowiedź JSON: %s", recorder.Body.String())
+	log.Printf("JSON Response: %s", recorder.Body.String())
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
@@ -95,10 +95,10 @@ func TestGetSwiftCodeDetails_HQWithoutBranches(t *testing.T) {
 	assert.Equal(t, "Germany", response["countryName"])
 	assert.True(t, response["isHeadquarter"].(bool))
 
-	// Sprawdzamy, czy pole 'branches' istnieje i jest pustą listą
+	// Verify that 'branches' field exists and is an empty list
 	branches, branchesExist := response["branches"]
-	assert.True(t, branchesExist, "Pole 'branches' powinno istnieć")
-	assert.Len(t, branches, 0, "Pole 'branches' powinno być pustą listą")
+	assert.True(t, branchesExist, "The 'branches' field should exist")
+	assert.Len(t, branches, 0, "The 'branches' field should be an empty list")
 }
 
 func TestGetSwiftCodeDetails_BranchOnly(t *testing.T) {
@@ -116,7 +116,7 @@ func TestGetSwiftCodeDetails_BranchOnly(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, req)
 
-	log.Printf("Odpowiedź JSON: %s", recorder.Body.String())
+	log.Printf("JSON Response: %s", recorder.Body.String())
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
@@ -130,5 +130,5 @@ func TestGetSwiftCodeDetails_BranchOnly(t *testing.T) {
 	assert.Equal(t, "United Kingdom", response["countryName"])
 	assert.False(t, response["isHeadquarter"].(bool))
 	_, branchesExist := response["branches"].([]interface{})
-	assert.False(t, branchesExist, "Pole 'branches' nie powinno istnieć dla brancha")
+	assert.False(t, branchesExist, "The 'branches' field should not exist for a branch")
 }

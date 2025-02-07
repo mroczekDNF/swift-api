@@ -6,33 +6,33 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // Sterownik PostgreSQL dla database/sql
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver for database/sql
 )
 
-var DB *sql.DB // Globalne połączenie z bazą danych
+var DB *sql.DB // Global database connection
 
-// InitDatabase inicjalizuje połączenie z bazą PostgreSQL
+// InitDatabase initializes the PostgreSQL database connection
 func InitDatabase(dsn string) {
 	var err error
 
-	// 5 prób połączenia
+	// Attempt connection up to 5 times
 	for i := 0; i < 5; i++ {
 		DB, err = sql.Open("pgx", dsn)
 		if err == nil && DB.Ping() == nil {
 			break
 		}
-		log.Printf("Próba połączenia z bazą danych nie powiodła się (%d/5), ponawianie za 5 sekund...", i+1)
+		log.Printf("Database connection attempt failed (%d/5), retrying in 5 seconds...", i+1)
 		time.Sleep(5 * time.Second)
 	}
 
 	if err != nil {
-		log.Fatalf("Nie udało się połączyć z bazą danych: %v", err)
+		log.Fatalf("Failed to connect to the database: %v", err)
 	}
 
-	log.Println("Połączenie z bazą danych nawiązane")
+	log.Println("Database connection established")
 }
 
-// MigrateDatabase tworzy tabelę swift_codes, jeśli nie istnieje
+// MigrateDatabase creates the swift_codes table if it does not exist
 func MigrateDatabase() {
 	query := `
 	CREATE TABLE IF NOT EXISTS swift_codes (
@@ -46,27 +46,27 @@ func MigrateDatabase() {
 		headquarter_id INT
 	);
 
-	-- Dodanie indeksu na headquarter_id dla szybkiego wyszukiwania branchy
+	-- Add an index on headquarter_id for faster branch lookups
 	CREATE INDEX IF NOT EXISTS idx_headquarter_id ON swift_codes (headquarter_id);
 	`
 	_, err := DB.Exec(query)
 	if err != nil {
-		log.Fatalf("Błąd migracji bazy danych: %v", err)
+		log.Fatalf("Database migration error: %v", err)
 	}
 
-	log.Println("Migracja bazy danych zakończona sukcesem")
+	log.Println("Database migration completed successfully")
 }
 
-// CloseDatabase zamyka połączenie z bazą danych
+// CloseDatabase closes the database connection
 func CloseDatabase() {
 	if err := DB.Close(); err != nil {
-		log.Fatalf("Błąd zamykania połączenia z bazą danych: %v", err)
+		log.Fatalf("Error closing database connection: %v", err)
 	}
 
-	log.Println("Połączenie z bazą danych zamknięte")
+	log.Println("Database connection closed")
 }
 
-// IsTableEmpty sprawdza, czy tabela jest pusta
+// IsTableEmpty checks if a table is empty
 func IsTableEmpty(tableName string) (bool, error) {
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 	var count int

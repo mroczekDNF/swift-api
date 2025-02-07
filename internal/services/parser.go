@@ -54,7 +54,6 @@ func isValidRecord(record []string) bool {
 		return false
 	}
 
-	// Check the SWIFT code length.
 	if len(swiftCode) < 8 || len(swiftCode) > 11 {
 		log.Println("Rejected record:", swiftCode, "- invalid SWIFT code length")
 		return false
@@ -140,8 +139,6 @@ func createHeadquartersMap(validData [][]string) map[string]int64 {
 
 // processValidRecords processes valid records, assigning them IDs and establishing relationships
 // between branches and headquarters.
-// processValidRecords processes valid records, assigning them IDs and establishing relationships
-// between branches and headquarters.
 func processValidRecords(validData [][]string, headquartersMap map[string]int64) []models.SwiftCode {
 	// Preallocate slice based on the number of records.
 	swiftCodes := make([]models.SwiftCode, len(validData))
@@ -172,9 +169,6 @@ func processValidRecords(validData [][]string, headquartersMap map[string]int64)
 			key := swiftCode[:8]
 			if hqID, exists := headquartersMap[key]; exists {
 				swift.HeadquarterID = &hqID
-			} else {
-				// Log a warning if a branch does not have a corresponding headquarters.
-				log.Printf("Warning: Branch %s does not have a corresponding headquarters in the map.", swiftCode)
 			}
 		}
 		swiftCodes[idx] = swift
