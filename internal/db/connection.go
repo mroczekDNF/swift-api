@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Sterownik PostgreSQL dla database/sql
 )
@@ -12,14 +13,19 @@ var DB *sql.DB // Globalne połączenie z bazą danych
 // InitDatabase inicjalizuje połączenie z bazą PostgreSQL
 func InitDatabase(dsn string) {
 	var err error
-	DB, err = sql.Open("pgx", dsn)
-	if err != nil {
-		log.Fatalf("Błąd połączenia z bazą danych: %v", err)
+
+	// 5 prób połączenia
+	for i := 0; i < 5; i++ {
+		DB, err = sql.Open("pgx", dsn)
+		if err == nil && DB.Ping() == nil {
+			break
+		}
+		log.Printf("Próba połączenia z bazą danych nie powiodła się (%d/5), ponawianie za 5 sekund...", i+1)
+		time.Sleep(5 * time.Second)
 	}
 
-	// Sprawdzenie połączenia
-	if err := DB.Ping(); err != nil {
-		log.Fatalf("Baza danych nie odpowiada: %v", err)
+	if err != nil {
+		log.Fatalf("Nie udało się połączyć z bazą danych: %v", err)
 	}
 
 	log.Println("Połączenie z bazą danych nawiązane")

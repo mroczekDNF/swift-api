@@ -13,9 +13,10 @@ services:
       - DB_PASSWORD=mikus123
       - DB_NAME=swift
     ports:
-      - "8080:8080" # Aplikacja dostępna na localhost:8080
+      - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -29,8 +30,13 @@ services:
       POSTGRES_DB: swift
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swiftuser -d swift"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
     volumes:
-      - db-data:/var/lib/postgresql/data # Zachowanie danych między restartami kontenera
+      - db-data:/var/lib/postgresql/data
     networks:
       - app-network
 
