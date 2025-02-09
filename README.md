@@ -109,3 +109,45 @@ docker-compose -f docker-compose_test.yml down --volumes
 - The API is set to use `localhost:8080` for the main application and `localhost:5433` for the test database.
 
 ---
+
+## Architecture & Implementation Details
+
+### Data Validation and Error Handling
+- The API includes robust validation mechanisms to ensure the correctness of input data:
+  - **SWIFT codes** must be between 8 and 11 characters.
+  - **Country ISO2 codes** must be exactly 2 uppercase letters.
+  - Essential fields such as `bank_name`, `country_name`, and `is_headquarter` are mandatory.
+- Addresses, while not critical, are gracefully handled. If the address is missing or empty, it defaults to `"UNKNOWN"` to align with business logic, where the address is less significant than other fields.
+
+### Headquarter and Branch Relationships
+- The database tracks hierarchical relationships between headquarters and branches using the `headquarter_id` column.
+- Each branch is linked to its headquarters through this column, which is indexed for efficient querying.
+- Headquarters are uniquely identified by their SWIFT codes, which typically end with "XXX".
+
+### Performance Optimizations
+- The addition of the `headquarter_id` column significantly improves query performance, especially when retrieving branches associated with a specific headquarters.
+- Indexed relationships ensure that queries for branches are fast and scalable, even as the dataset grows.
+
+### Robustness Against Errors
+- The new functionality for managing headquarter-branch relationships has been implemented with safeguards to maintain data integrity:
+  - When a headquarter is deleted, the `headquarter_id` field of its associated branches is automatically set to `NULL`.
+  - When new headquarters or branches are added, the system ensures that they are appropriately linked or assigned to maintain consistent relationships.
+  - Comprehensive testing ensures the functionality is error-free and resilient.
+
+### Database Schema
+- The `swift_codes` table includes the following columns:
+  - `id`: Primary key.
+  - `swift_code`: Unique identifier for each record.
+  - `bank_name`, `address`, `country_iso2`, `country_name`: Key fields containing bank information.
+  - `is_headquarter`: Boolean field indicating whether the SWIFT code belongs to a headquarters.
+  - `headquarter_id`: Nullable foreign key linking a branch to its headquarters.
+
+### Scalability and Extendability
+- The architecture is designed to accommodate future features, such as:
+  - Additional metadata for SWIFT codes.
+  - Enhanced reporting or more complex relationships between records.
+
+### Business Logic and Practical Decisions
+- The decision to handle unknown addresses as `"UNKNOWN"` reflects a practical understanding of business needs, emphasizing the importance of fields like SWIFT code and bank name over address details.
+- By focusing on critical data, the system ensures reliability and usability even in scenarios with incomplete information.
+
