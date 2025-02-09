@@ -11,34 +11,27 @@ import (
 
 const testDBURL = "postgres://testuser:testpassword@localhost:5433/swift_test_db?sslmode=disable"
 
-// SetupTestDatabase przygotowuje bazę danych do testów integracyjnych
 func SetupTestDatabase(t *testing.T) {
-	// Inicjalizacja połączenia do bazy danych
 	db.InitDatabase(testDBURL)
 
-	// Jeżeli test się nie powiedzie, zamykamy połączenie
 	t.Cleanup(func() {
 		if t.Failed() {
-			log.Println("Zamykanie bazy danych po nieudanym teście")
+			log.Println("Closing database connection after a failed test")
 		}
 		db.CloseDatabase()
 	})
 
-	// Migracja struktury bazy danych
 	db.MigrateDatabase()
 
-	// Wczytanie danych testowych
 	records, err := services.ParseSwiftCodes("../../data/test_data.csv")
-	assert.NoError(t, err, "Błąd parsowania danych testowych")
+	assert.NoError(t, err, "Error parsing test data")
 
 	err = services.SaveSwiftCodesToDatabase(db.DB, records)
-	assert.NoError(t, err, "Błąd zapisu danych testowych")
-
+	assert.NoError(t, err, "Error saving test data to the database")
 }
 
-// CleanupTestDatabase czyści dane z testowej bazy danych po zakończeniu testu
 func CleanupTestDatabase(t *testing.T) {
 	_, err := db.DB.Exec("TRUNCATE TABLE swift_codes RESTART IDENTITY CASCADE;")
-	assert.NoError(t, err, "Błąd podczas czyszczenia bazy danych")
-	log.Println("Baza testowa wyczyszczona")
+	assert.NoError(t, err, "Error cleaning up the test database")
+	log.Println("Test database cleaned up")
 }

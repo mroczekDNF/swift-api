@@ -15,6 +15,7 @@ type SwiftCodeRepositoryInterface interface {
 	DetachBranchesFromHeadquarter(headquarterID int64) error
 	InsertSwiftCode(swift *models.SwiftCode) error
 	GetBranchesByHeadquarter(headquarterCode string) ([]models.SwiftCode, error)
+	AssignBranchesToHeadquarter(headquarterCode string) error
 }
 
 // SwiftCodeRepository handles operations on the swift_codes table
@@ -155,4 +156,31 @@ func (r *SwiftCodeRepository) GetBranchesByHeadquarter(headquarterCode string) (
 		return nil, sql.ErrNoRows
 	}
 	return branches, nil
+}
+
+func (r *SwiftCodeRepository) AssignBranchesToHeadquarter(headquarterCode string) error {
+	var headquarterID int
+
+	// Pobranie ID nowo dodanego headquarter
+	err := r.db.QueryRow("SELECT id FROM swift_codes WHERE swift_code = $1;", headquarterCode).Scan(&headquarterID)
+	if err != nil {
+		log.Println("Error fetching headquarter ID in AssignBranchesToHeadquarter:", err)
+		return err
+	}
+
+	// Zaktualizowanie branchy, które pasują do prefiksu headquarter
+	query := `
+		UPDATE swift_codes
+		SET headquarter_id = $1
+		WHERE swift_code LIKE $2
+		AND is_headquarter = false
+		AND headquarter_id IS NULL;
+	`
+	_, err = r.db.Exec(query, headquarterID, headquarterCode[:8]+"%")
+	if err != nil {
+		log.Println("Error updating branches in AssignBranchesToHeadquarter:", err)
+		return err
+	}
+
+	return nil
 }

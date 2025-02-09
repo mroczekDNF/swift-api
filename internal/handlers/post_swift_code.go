@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"regexp"
@@ -59,6 +60,16 @@ func (h *SwiftCodeHandler) AddSwiftCode(c *gin.Context) {
 		log.Println("Error saving SWIFT code:", err)
 		respondWithError(c, http.StatusInternalServerError, "Error saving SWIFT code")
 		return
+	}
+
+	// Jeśli dodaliśmy headquarter, sprawdzamy, czy są branche do przypisania
+	if *request.IsHeadquarter {
+		err = h.repo.AssignBranchesToHeadquarter(request.SwiftCode)
+		if err != nil && err != sql.ErrNoRows {
+			log.Println("Error assigning branches to headquarter:", err)
+			respondWithError(c, http.StatusInternalServerError, "Error assigning branches to headquarter")
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "SWIFT code added successfully"})

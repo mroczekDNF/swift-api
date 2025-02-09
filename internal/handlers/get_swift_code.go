@@ -9,23 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetSwiftCodeDetails zwraca szczegóły dla danego SWIFT code.
+// GetSwiftCodeDetails returns details for a given SWIFT code.
 func (h *SwiftCodeHandler) GetSwiftCodeDetails(c *gin.Context) {
 	swiftCode := strings.TrimSpace(c.Param("swiftCode"))
 
-	// Pobierz szczegóły dla podanego SWIFT code
+	// Fetch details for the given SWIFT code
 	swift, err := h.repo.GetBySwiftCode(swiftCode)
 	if err != nil {
-		log.Println("Błąd pobierania SWIFT code:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania danych"})
+		log.Println("Error fetching SWIFT code:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data"})
 		return
 	}
 	if swift == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "SWIFT code nie znaleziony"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "SWIFT code not found"})
 		return
 	}
 
-	// Struktura odpowiedzi
+	// Response structure
 	response := gin.H{
 		"swiftCode":     swift.SwiftCode,
 		"bankName":      swift.BankName,
@@ -35,16 +35,16 @@ func (h *SwiftCodeHandler) GetSwiftCodeDetails(c *gin.Context) {
 		"isHeadquarter": swift.IsHeadquarter,
 	}
 
-	// Jeśli to headquarters, dodaj branches do odpowiedzi
+	// If it's a headquarters, add branches to the response
 	if swift.IsHeadquarter {
 		branches, err := h.repo.GetBranchesByHeadquarter(swift.SwiftCode)
 		if err != nil && err != sql.ErrNoRows {
-			log.Println("Błąd pobierania branchy:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania branchy"})
+			log.Println("Error fetching branches:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching branches"})
 			return
 		}
 
-		// **Fix: Konwersja branchy do poprawnej struktury JSON**
+		// Convert branches to the proper JSON structure
 		branchList := make([]gin.H, 0)
 		for _, branch := range branches {
 			branchList = append(branchList, gin.H{
